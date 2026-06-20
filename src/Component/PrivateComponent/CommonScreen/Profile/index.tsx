@@ -1,214 +1,294 @@
 import { useNavigation } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
-import { ScrollView, TextInput, ToastAndroid } from "react-native";
 import {
-    Image,
-    View,
-    Text,
-    TouchableOpacity,
+  ScrollView,
+  TextInput,
+  ToastAndroid,
+  StatusBar,
+  Image,
+  View,
+  Text,
+  TouchableOpacity
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import Entypo from "react-native-vector-icons/Entypo";
-import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import DocumentPicker, { types } from "react-native-document-picker";
-import { FetchProfileUpdate, FetchUsers } from "./helper";
+import { updateingUser } from "./helper";
 import Loader from "../../../../Common/Loader";
+import AvatarPickerModal, { defaultImg } from "./Avatar";
+import { COLORS } from "../../../../utils/ColorCode";
+import Header from "../../../../Common/Header";
+import CustomImagePicker from "../../../../Common/ImagePicker";
+import { showError, showSuccess } from "../../../../Common/ToastMessage";
 
-
-const NoImg = require("../../../../../assets/Image/NoImg.png");
+const profilebg = require("../../../../../assets/Image/Profilebg.png");
+const NoImg = require("../../../../../assets/Image/EtyImg.png");
 
 const ProfileScreen = () => {
-    const navigation = useNavigation();
-    const [showLoading, setShowLoading] = useState<boolean>(false);
-    const [user, setUser] = useState<any>([]);
+  const navigation = useNavigation();
+  const value = "My Profile";
+  const backNavigate = true;
 
-    const [userData, setUserData] = useState<any[]>([]);
+  const [token, setToken] = useState<any>(null);
+  const [showLoading, setShowLoading] = useState<boolean>(false);
+  const [profile, setProfile] = useState<any>({
+    name: '',
+    email: '',
+    phno: '',
+    address: '',
+    img: ''
+  });
+  const [edit, setEdit] = useState<boolean>(false);
 
-    const [profilePic, setProfilePic] = useState<any>(null);
-    const [address, setAddress] = useState<any>(null);
-    const [addressEdit, setAddressEdit] = useState<boolean>(false);
+  const handleUpdate = async () => {
+    setShowLoading(true);
 
-    console.log('====================================');
-    console.log(userData);
-    console.log('====================================');
-
-    const pickDocument = async () => {
-        try {
-            const result = await DocumentPicker.pick({
-                type: [types.images],
-                allowMultiSelection: false,
-            });
-            setProfilePic(result[0]);
-
-        } catch (err) {
-            if (DocumentPicker.isCancel(err)) {
-                console.log("Document picker canceled");
-            } else {
-                console.error("Error picking document:", err);
-            }
-        }
-    };
-
-    const fetchProfile = async () => {
-        const userId = user.id;
-        const formData = new FormData;
-        if(profilePic){
-            formData.append("profilePic", {
-                uri: profilePic.uri,
-                name: profilePic.name,
-                type: profilePic.type,
-            });
-        }
-        formData.append("address", address);
-        
-        try {
-            const response = await FetchProfileUpdate(userId, formData);
-            if (response.status === 200) {
-                setAddressEdit(false)
-                ToastAndroid.show(response.data, ToastAndroid.SHORT);
-                fetchUserData();
-            }
-        } catch (error) {
-            console.log("profile update ",error);
-        }
+    const payload = {
+      Name: profile?.name,
+      Email: profile?.email,
+      MobileNo: profile?.phno,
+      ProfilePic: profile?.img,
+      Address: profile?.address
     }
-    
-    const fetchUserData = async () => {
-        try {
-            const storedUserData:any = await AsyncStorage.getItem("UserData");
-            console.log('====================================');
-            console.log("stored Data",storedUserData);
-            console.log('====================================');
-            setUser(JSON.parse(storedUserData));
-            // fetchUserData();
-            
-        } catch (error) {
-            console.error("Error fetching user data from AsyncStorage:", error);
-        }
-    };
 
+    try {
+      const res = await updateingUser(payload, token)
+      const { data: { status = 0, message = '', user = {} } } = res
+      if(status === 200){
+        await AsyncStorage.setItem("UserData", JSON.stringify(user));
+        closeEdit()
+        showSuccess(message)
+      }
+    } catch (error) {
+      showError(error);
+    } finally {
+      setShowLoading(false);
+    }
+  };
 
-    useEffect(() => {
-        fetchUserData();
-    }, []);
+  const openEdit = () => {
+    setEdit(true)
+  }
 
-    useEffect(()=>{
-        const fetchUserDetails = async () => {
-            if(user){
-                setShowLoading(true);
-                const userId = user.id;
+  const closeEdit = () => {
+    setEdit(false)
+  }
 
-                try {
-                    const response = await FetchUsers(userId);
-                    setUserData(response.data);
-                } catch (error: any) {
-                    console.log("user details",error);
-                } finally {
-                    setShowLoading(false)
-                }
-            }
-        }
+  const fetchUserData = async () => {
+    try {
+      const storedUserData: any = await AsyncStorage.getItem("UserData");
+      const tokens: any = await AsyncStorage.getItem("token");
 
-        fetchUserDetails();
-    },[user])
+      if (storedUserData) {
+        const parsedUser = JSON.parse(storedUserData);
+        setProfile({
+          name: parsedUser?.Name,
+          email: parsedUser?.Email,
+          phno: parsedUser?.MobileNo,
+          address: parsedUser?.Address,
+          img: parsedUser?.ProfilePic
+        }); // from backend
+        setToken(tokens);
+      }
 
-    return (
-        <View style={{ flex: 1, backgroundColor: '#fff' }}>
-            {
-                showLoading && (
-                    <View style={{ position: 'absolute', height: '100%', width: '100%', zIndex: 10 }}>
-                        <Loader />
-                    </View>
-                )
-            }
+    } catch (error) {
+      showError(error);
+    }
+  };
 
-            <View style={{ flex: 1 }}>
-                <View style={{ height: '100%', width: '100%' }}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginLeft: 10, marginTop: 10, position: 'absolute' }}>
-                        <Ionicons name="arrow-back" size={30} color={"black"} />
-                    </TouchableOpacity>
+  useEffect(() => {
+    fetchUserData();
+  }, []);
 
-                    <View style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' }}>
-                        <View style={{ height: '50%', width: '30%', backgroundColor: '#ffffff', borderRadius: 60, justifyContent: 'center', alignItems: 'center' }}>
-                            <Image
-                                source={userData.profilePic ? { uri: `data:image/jpeg;base64,${userData.profilePic}` } : profilePic ? { uri: profilePic.uri } : NoImg}
-                                style={{ height: '100%', width: '100%', borderRadius: 100 }}
-                                resizeMode="cover"
-                            />
-                            <TouchableOpacity onPress={pickDocument} style={{ marginLeft: "80%", bottom: "30%", backgroundColor: '#5a639c', height: 30, width: 30, justifyContent: 'center', alignItems: 'center', borderRadius: 30 }}>
-                                <Entypo name="edit" color={"white"} size={20} />
-                            </TouchableOpacity>
-                        </View>
-                        <View style={{ marginTop: '5%' }}>
-                            <Text style={{ color: 'black', fontWeight: 'bold', fontSize: 20 }}>{user.name}</Text>
-                        </View>
-                    </View>
-                </View>
-            </View>
-
-            <View style={{ flex: 2, backgroundColor: '#fff', borderTopWidth: 1, borderColor: 'black', borderTopLeftRadius: 30, borderTopRightRadius: 30 }}>
-                <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-                    <View style={{ backgroundColor: '#fff', width: '100%', padding: 20 }}>
-                        <View style={{ marginTop: 10, padding: 10, flexDirection: 'row', width: '100%' }}>
-                            <Text style={{ color: 'black', fontWeight: 'bold', fontSize: 18, width: '20%' }}>Id</Text>
-                            <Text style={{ color: 'black', fontWeight: 'bold', fontSize: 16, width: '80%' }}>:  RTR-00{user.id}</Text>
-                        </View>
-
-                        <View style={{ marginTop: 10, padding: 10, flexDirection: 'row', width: '100%' }}>
-                            <Text style={{ color: 'black', fontWeight: 'bold', fontSize: 18, width: '20%' }}>Email</Text>
-                            <Text style={{ color: 'black', fontWeight: 'bold', fontSize: 16, width: '80%' }}>:  {user.email}</Text>
-                        </View>
-
-                        <View style={{ marginTop: 10, padding: 10, flexDirection: 'row', width: '100%' }}>
-                            <Text style={{ color: 'black', fontWeight: 'bold', fontSize: 18, width: '20%' }}>Mob No</Text>
-                            <Text style={{ color: 'black', fontWeight: 'bold', fontSize: 16, width: '80%' }}>:  {user.phoneNumber}</Text>
-                        </View>
-
-                        <View style={{ marginTop: 10, padding: 10, width: '100%' }}>
-                            <Text style={{ color: 'black', fontWeight: 'bold', fontSize: 18 }}>Address :-</Text>
-                            <View style={{ width: '100%', flexDirection: 'row' }}>
-                                {
-                                    !addressEdit ? (
-                                        <View style={{ width: '100%', flexDirection: 'row', marginTop:10 }}>
-                                            <View style={{ width: '90%' }}>
-                                                <Text style={{ color: 'black', fontWeight: 'bold', fontSize: 16, width: '70%' }}>{userData.address}</Text>
-                                            </View>
-
-                                            <View style={{ width: '10%' }}>
-                                                <TouchableOpacity onPress={() => setAddressEdit(true)}>
-                                                    <FontAwesome5 name="edit" size={20} color={"black"} />
-                                                </TouchableOpacity>
-                                            </View>
-                                        </View>
-                                    ) : (
-                                        <TextInput
-                                            style={{ borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 10, color: "#000", width: '100%', textAlignVertical: 'top', height: 100 }}
-                                            placeholder="Enter Address"
-                                            placeholderTextColor="gray"
-                                            multiline={true}
-                                            numberOfLines={4}
-                                            onChangeText={(txt) => {
-                                                setAddress(txt);
-                                            }}
-                                        />
-                                    )
-                                }
-                            </View>
-                        </View>
-                    </View>
-
-                    <View style={{ flex: 1, alignItems: "center" }}>
-                        <TouchableOpacity onPress={fetchProfile}>
-                            <View style={{ backgroundColor: "#5a639c", padding: 15, borderRadius: 10, width: 150, alignItems: "center" }}>
-                                <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 18 }}>Update</Text>
-                            </View>
-                        </TouchableOpacity>
-                    </View>
-                </ScrollView>
-            </View>
+  return (
+    <View className="flex-1" style={{ backgroundColor: COLORS.primary }}>
+      {showLoading && (
+        <View style={{ position: 'absolute', height: '100%', width: '100%', zIndex: 10 }}>
+          <Loader />
         </View>
-    );
+      )}
+
+      <View className="flex-1">
+        <Header value={value} backNavigate={backNavigate} edit={true} clickEdit={openEdit} />
+      </View>
+
+      <View className="bg-[#cccccc] w-full h-full" style={{ flex: 9 }}>
+        <View className="p-10 rounded-b-3xl" style={{ backgroundColor: COLORS.primary }}>
+          <View className="absolute bg-white p-2 self-center items-center w-[100%] rounded-2xl mt-4 h-60">
+            <View className="w-36 h-36 justify-center items-center mt-2" style={{ borderColor: COLORS.primary, borderWidth: 3, borderRadius: 20 }}>
+              <Image
+                source={
+                  profile.img
+                    ? { uri: profile.img }
+                    : NoImg
+                }
+                resizeMode="cover"
+                className="w-full h-full"
+                style={{ borderRadius: 20 }}
+              />
+            </View>
+
+            <View className="mt-3 flex-row justify-around w-full">
+              <CustomImagePicker
+                primaryColor={COLORS.primary}
+                onImageSelect={(image) => {
+                  setProfile({
+                    ...profile,
+                    img: image.path,
+                  });
+                }}
+              />
+            </View>
+          </View>
+        </View>
+
+        <View className="mt-52 px-4">
+          <ScrollView
+            contentContainerStyle={{
+              paddingHorizontal: 16,
+              paddingBottom: 200,
+            }}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Name */}
+            <View className="mb-4">
+              <Text
+                className="text-sm font-semibold mb-2"
+                style={{ color: COLORS.primary }}
+              >
+                Full Name
+              </Text>
+
+              <View
+                className="bg-white rounded-2xl px-4"
+                style={{
+                  borderWidth: 1,
+                  borderColor: "#E5E7EB",
+                  elevation: 2,
+                }}
+              >
+                <TextInput
+                  value={profile.name}
+                  onChangeText={(text) =>
+                    setProfile({ ...profile, name: text })
+                  }
+                  placeholder="Enter Full Name"
+                  className="text-base text-black py-4"
+                  readOnly={!edit}
+                />
+              </View>
+            </View>
+
+            {/* Email */}
+            <View className="mb-4">
+              <Text
+                className="text-sm font-semibold mb-2"
+                style={{ color: COLORS.primary }}
+              >
+                Email Address
+              </Text>
+
+              <View
+                className="bg-white rounded-2xl px-4"
+                style={{
+                  borderWidth: 1,
+                  borderColor: "#E5E7EB",
+                  elevation: 2,
+                }}
+              >
+                <TextInput
+                  value={profile.email}
+                  onChangeText={(text) =>
+                    setProfile({ ...profile, email: text })
+                  }
+                  keyboardType="email-address"
+                  placeholder="Enter Email Address"
+                  className="text-base text-black py-4"
+                  readOnly={!edit}
+                />
+              </View>
+            </View>
+
+            {/* Phone */}
+            <View className="mb-4">
+              <Text
+                className="text-sm font-semibold mb-2"
+                style={{ color: COLORS.primary }}
+              >
+                Mobile Number
+              </Text>
+
+              <View
+                className="bg-white rounded-2xl px-4"
+                style={{
+                  borderWidth: 1,
+                  borderColor: "#E5E7EB",
+                  elevation: 2,
+                }}
+              >
+                <TextInput
+                  value={profile.phno}
+                  onChangeText={(text) =>
+                    setProfile({ ...profile, phno: text })
+                  }
+                  keyboardType="phone-pad"
+                  placeholder="Enter Mobile Number"
+                  className="text-base text-black py-4"
+                  readOnly={!edit}
+                />
+              </View>
+            </View>
+
+            {/* Address */}
+            <View className="mb-4">
+              <Text
+                className="text-sm font-semibold mb-2"
+                style={{ color: COLORS.primary }}
+              >
+                Address
+              </Text>
+
+              <View
+                className="bg-white rounded-2xl px-4"
+                style={{
+                  borderWidth: 1,
+                  borderColor: "#E5E7EB",
+                  elevation: 2,
+                }}
+              >
+                <TextInput
+                  value={profile.address}
+                  onChangeText={(text) =>
+                    setProfile({ ...profile, address: text })
+                  }
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                  placeholder="Enter Address"
+                  className="text-base text-black py-4"
+                  readOnly={!edit}
+                />
+              </View>
+            </View>
+
+            {/* Update Button */}
+            {edit ?
+              <TouchableOpacity
+                className="rounded-2xl py-4 mt-4"
+                style={{ backgroundColor: COLORS.primary }}
+                onPress={handleUpdate}
+              >
+                <Text className="text-center text-white text-base font-bold">
+                  Update Profile
+                </Text>
+              </TouchableOpacity> : null
+            }
+
+          </ScrollView>
+        </View>
+      </View>
+    </View>
+  );
 };
 
 export default ProfileScreen;

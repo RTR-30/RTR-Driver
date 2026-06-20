@@ -15,7 +15,7 @@ const Feature = require("../../../../assets/Image/OnboardImage/Screen2.png");
 const Privacy = require("../../../../assets/Image/OnboardImage/Screen4.png");
 
 const OnboardingScreen = () => {
-    const navigation = useNavigation();
+    const navigation: any = useNavigation();
 
     return (
         <View style={{flex:1}}>

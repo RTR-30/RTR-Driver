@@ -1,19 +1,22 @@
 import axios from "axios";
-import { BaseUrl, profileUpdate, userDetails } from "../../../../../environment/ApiManager/index";
+import { baseUrl, updateUser} from "../../../../../environment/ApiManager/index";
 
-export const FetchProfileUpdate = (userId:any, formData:any) => {
-    return axios.put(BaseUrl + profileUpdate + userId , formData, {
-        headers: {
-            'Content-Type': 'multipart/form-data',
+
+export const updateingUser = (data: any, token: any) => {
+    return axios.put(`${baseUrl}${updateUser}`, data, {
+        headers:{
+            Authorization: `Bearer ${token}`,
         }
-    });
-};
+    })
+}
 
-export const FetchUsers = (userId:any) => {
-    return axios.get(BaseUrl + userDetails + userId,{
-        headers: {
-            'Content-Type': 'application/json',
-        }
-    });
-};
-
+// export const UpdateBooking = async (token:any, data:any) => {
+//     return axios.put(`${bookingBaseUrl}${updateBooking}`, data,{
+//         params:{
+//             status:"Cancelled",            
+//         },
+//         headers:{
+//             Authorization: `Bearer ${token}`,
+//         }
+//     })
+// }

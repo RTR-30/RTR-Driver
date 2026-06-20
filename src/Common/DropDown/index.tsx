@@ -20,6 +20,7 @@ const CustomDropDown = ({data, setValue, value, errMsg}:any) => {
                 placeholder="Select item"
                 value={value}
                 onChange={item => setValue(item.label)}
+                mode='modal'
             />
             </View>
             <View>

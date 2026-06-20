@@ -12,20 +12,19 @@ import {
 import Entypo from "react-native-vector-icons/Entypo";
 import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import DeviceInfo from "react-native-device-info";
+import { COLORS } from "../../../../utils/ColorCode";
 
 const DrivingImg = require("../../../../../assets/Image/OwnerHomeImg.png");
 const CheckListImg = require("../../../../../assets/Image/Checklist.png");
 
 const OwnerHome = () => {
-    const navigation = useNavigation();
+    const navigation:any = useNavigation();
 
+    const [appVersion, setAppVersion] = useState<any>(null);
     const [userData, setUserData] = useState<any>(null);
-
-    console.log('====================================');
-    console.log(userData);
-    console.log('====================================');
-
-    useEffect(()=>{
+    
+    useEffect(() => {
         const fetchUserData = async () => {
             try {
                 const storedUserData = await AsyncStorage.getItem("UserData");
@@ -37,44 +36,58 @@ const OwnerHome = () => {
             }
         };
 
+        const appVersion = DeviceInfo.getVersion(); // Gets versionName from build.gradle
+        setAppVersion(appVersion)
+
         fetchUserData();
-    },[])
+    }, [])
     return (
-        <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#5a639c' }}>
-            <StatusBar backgroundColor={"#5a639c"} barStyle={"dark-content"} />
+        <SafeAreaView className="flex-1 justify-center items-center" style={{backgroundColor: COLORS.primary}}>
+            
             <View>
-                <View style={{ flex: 1, backgroundColor: '#5a639c' }}>
-                    <View style={{ height: '100%', width: '100%', flexDirection: 'row' }}>
-                        <View style={{ width: '15%', height: '100%', justifyContent: 'center', alignItems: 'center' }}>
+                <View className="flex-1" style={{backgroundColor: COLORS.primary}}>
+                    <View className="h-full w-full flex-row">
+                        <View className="w-[15%] h-full justify-center items-center">
+                            {/* add any item */}
                         </View>
 
-                        <View style={{ width: '70%', height: '100%', flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
-                            <Text style={{ color: 'black', fontSize: 18, fontWeight: 'bold' }}>Drive4U</Text>
-                            <FontAwesome5 name="car" color={"black"} size={24} style={{ marginLeft: 10 }} />
+                        <View className="w-[70%] flex-row h-full justify-center items-center">
+                            <Text className="text-black text-[18px] font-bold" style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>RTR Driver</Text>
+                            <FontAwesome5 name="car" color={"white"} size={24} style={{ marginLeft: 10 }} />
                         </View>
 
-                        <View style={{ width: '15%', height: '100%', justifyContent: 'center', alignItems: 'center' }}>
+                        <View className="w-[15%] h-full justify-center items-center">
                             <TouchableOpacity onPress={() => navigation.openDrawer()}>
-                                <Entypo name="menu" size={24} color={"black"} />
+                                <Entypo name="menu" size={24} color={"white"} />
                             </TouchableOpacity>
                         </View>
                     </View>
                 </View>
 
-                <View style={{ flex: 9, backgroundColor: 'white', borderTopStartRadius: 40, borderTopEndRadius: 40, padding: 10 }}>
-                    <View style={{ flexDirection: 'row', width: '100%', justifyContent: 'space-around', marginTop: 10 }}>
-                        <TouchableOpacity onPress={() => navigation.navigate("Trip")} style={{ width: '40%', height: 150, borderRadius: 20, justifyContent: 'center', alignItems: 'center', shadowColor: 'black', elevation: 3, backgroundColor:'#fff' }}>
-                            <Image source={DrivingImg} style={{ width: '100%', height: '80%' }} />
+                <View className="flex-[9] bg-white rounded-t-[30px] p-1">
+                    <View className="flex-row w-full justify-around mt-5">
+                        <TouchableOpacity onPress={() => navigation.navigate("Trip")}
+                            style={{ shadowColor: 'black', elevation: 3 }}
+                            className="w-[40%] h-[150px] rounded-3xl justify-center items-center bg-white"
+                        >
+                            <Image source={DrivingImg} className="w-full h-[80%]" />
 
-                            <Text style={{ textAlign: 'center', color: 'black', fontSize: 16, fontWeight: 'bold' }}>Acting Driving</Text>
+                            <Text className="text-center text-black text-[16px] font-bold">Acting Driving</Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity onPress={()=>navigation.navigate("BookingList", {user:userData.id})} style={{ width: '40%', height: 150, borderRadius: 20, justifyContent: 'center', alignItems: 'center', shadowColor: 'black', elevation: 3, backgroundColor:'#fff' }}>
-                            <Image source={CheckListImg} style={{ width: '100%', height: '80%' }} />
+                        <TouchableOpacity onPress={() => navigation.navigate("BookingList", { user: userData.id })}
+                            style={{ shadowColor: 'black', elevation: 3 }}
+                            className="w-[40%] h-[150px] rounded-3xl justify-center items-center bg-white"
+                        >
+                            <Image source={CheckListImg} className="w-full h-[80%]" />
 
-                            <Text style={{ textAlign: 'center', color: 'black', fontSize: 16, fontWeight: 'bold' }}>Booking Updates</Text>
+                            <Text className="text-center text-black text-[16px] font-bold">Booking Updates</Text>
                         </TouchableOpacity>
                     </View>
+
+                </View>
+                <View className="bg-white flex-[0.5] justify-center items-center">
+                    <Text style={{color: COLORS.primary}} className="text-center text-[14px] font-bold">v - {appVersion}</Text>
                 </View>
             </View>
         </SafeAreaView>

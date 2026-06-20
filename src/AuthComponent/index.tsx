@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
     View,
     TouchableOpacity,
-    Text
+    Text,
+    Platform
 } from "react-native";
 
 import { NavigationContainer, useNavigation } from "@react-navigation/native";
@@ -10,52 +11,78 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createDrawerNavigator, DrawerContentScrollView, DrawerItemList } from "@react-navigation/drawer";
 import { Provider, useDispatch } from "react-redux";
 import store from "../redux/store";
+import Ionicons from "react-native-vector-icons/Ionicons";
 
 import InitialPage from "../index";
 import OnboardingScreen from "../Component/PublicComponent/Onboarding/index";
 import Login from "../Component/PublicComponent/Login/index";
 import SignUp from "../Component/PublicComponent/Signup/index";
+import ForgetPassword from "../Component/PublicComponent/Login/forgetPassword";
 
 import OwnerHome from "../Component/PrivateComponent/CarOwner/OwnerHome/index";
 import TripScreen from "../Component/PrivateComponent/CarOwner/TripScreen/index";
 import BookingScreen from "../Component/PrivateComponent/CarOwner/BookingScreen/index";
 import BookingList from "../Component/PrivateComponent/CarOwner/BookingList/index";
 import ProfileScreen from "../Component/PrivateComponent/CommonScreen/Profile/index";
+import HelpAndFeedback from "../Component/PrivateComponent/CarOwner/HelpAndFeedBack/index";
+import ContactUs from "../Component/PrivateComponent/CarOwner/ContactUs/index";
+import OrderHistory from "../Component/PrivateComponent/CarOwner/OrderHistory/index";
+import MyReferal from "../Component/PrivateComponent/CarOwner/MyReferal";
 
-import Ionicons from "react-native-vector-icons/Ionicons";
-import { clearUser } from "../redux/reducer";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-
-// Constants for routes
-// export const Routes = {
-//     Initial: "Initial",
-//     Onboard: "Onboard",
-//     Login: "Login",
-//     SignUp: "SignUp",
-//     OwnerHome: "OwnerHome",
-//     DriverHome: "DriverHome",
-//     Trip: "Trip",
-//     Booking: "Booking",
-//     BookingList: "BookingList",
-//     Profile: "Profile",
-// };
+import { removeOneSignalservice } from "./helper";
 
 
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
 
 const CustomDrawerContent = (props: any) => {
-    const navigation = useNavigation();
+    const navigation: any = useNavigation();
+    const [token, setToken] = useState<any>(null);
+    const [playerIds, setPlayerIds] = useState<any>(null);
+
+    const removeOneSignalDeviceId = async () => {
+        const data = {
+            deviceId: playerIds,
+            deviceType: Platform.OS === 'ios' ? 'ios' : 'android',
+        }
+        try{
+            const res = await removeOneSignalservice(token, data)
+            await AsyncStorage.removeItem("userData");
+            await AsyncStorage.clear();
+            navigation.navigate("Login");
+        }catch(error){
+            console.log(error);
+            
+        }
+    }
 
     const handleLogout = async () => {
         try {
-            await AsyncStorage.removeItem("userData");
-            navigation.navigate("Login");
+            await removeOneSignalDeviceId();
         } catch (error) {
             console.error("Error clearing user data:", error);
         }
     };
+
+    useEffect(() => {
+        const fetchUserData = async () => {
+            try {
+                const tokens = await AsyncStorage.getItem("token");
+                const playerId = await AsyncStorage.getItem('ONESIGNAL_PLAYER_ID');
+                if (tokens && playerId) {
+                    setToken(tokens);
+                    setPlayerIds(playerId);
+                }
+            } catch (error) {
+                console.error("Error fetching user data from AsyncStorage:", error);
+            }
+        };
+
+        fetchUserData();
+    }, []);
+
+
 
     return (
         <>
@@ -63,8 +90,9 @@ const CustomDrawerContent = (props: any) => {
                 <DrawerItemList {...props} />
             </DrawerContentScrollView>
             <View style={{ height: '20%', width: '100%', justifyContent: 'center', alignItems: 'center' }}>
-                <TouchableOpacity onPress={handleLogout}>
-                    <Text style={{ color: 'red', fontWeight: 'bold', fontSize: 20 }}>Logout</Text>
+                <TouchableOpacity onPress={()=>handleLogout()} className="flex-row w-[25%] justify-around items-center">
+                    <Ionicons name="power" size={25} color={"red"}/>
+                    <Text className="text-[20px] font-bold text-red-500">Logout</Text>
                 </TouchableOpacity>
             </View>
         </>
@@ -82,16 +110,72 @@ const DrawerNavigation = () => {
                 drawerActiveBackgroundColor: 'white',
                 drawerStyle: {
                     width: '70%',
-                }
+                },
+                drawerItemStyle: {
+                    borderRadius: 5,
+                    marginVertical: 5,
+                    paddingVertical: 10,
+                },
+                drawerLabelStyle: {
+                    fontSize: 16,
+                    fontWeight: "bold",
+                    color: "black",
+                    textAlign: "left",
+                },
             }}
         >
             <Drawer.Screen name="Home" component={OwnerHome} options={{
                 drawerItemStyle: { display: 'none' }
             }} />
-            <Drawer.Screen name={"Profile"} component={ProfileScreen} />
+            <Drawer.Screen 
+                name="Profile" 
+                component={ProfileScreen} 
+                options={{
+                    drawerIcon: ({ color, size }) => (
+                        <Ionicons name="person-outline" size={size} color={color} />
+                    ),
+                }}
+            />
+            <Drawer.Screen 
+                name="Order History" 
+                component={OrderHistory} 
+                options={{
+                    drawerIcon: ({ color, size }) => (
+                        <Ionicons name="time-outline" size={size} color={color} />
+                    ),
+                }}
+            />
+            <Drawer.Screen 
+                name="Invite Friends" 
+                component={MyReferal} 
+                options={{
+                    drawerIcon: ({ color, size }) => (
+                        <Ionicons name="people" size={size} color={color} />
+                    ),
+                }}
+            />
+            <Drawer.Screen 
+                name="Term & Condition" 
+                component={HelpAndFeedback} 
+                options={{
+                    drawerIcon: ({ color, size }) => (
+                        <Ionicons name="document-text-outline" size={size} color={color} />
+                    ),
+                }}
+            />
+            <Drawer.Screen 
+                name="Contact Us" 
+                component={ContactUs} 
+                options={{
+                    drawerIcon: ({ color, size }) => (
+                        <Ionicons name="call-outline" size={size} color={color} />
+                    ),
+                }}
+            />
         </Drawer.Navigator>
-    )
-}
+    );
+};
+
 
 const NavigationPage = () => {
     return (
@@ -106,6 +190,7 @@ const NavigationPage = () => {
                     <Stack.Screen name={"Initial"} component={InitialPage} />
                     <Stack.Screen name={"Onboard"} component={OnboardingScreen} />
                     <Stack.Screen name={"Login"} component={Login} />
+                    <Stack.Screen name={"ForgetPassword"} component={ForgetPassword} />
                     <Stack.Screen name={"SignUp"} component={SignUp} />
                     <Stack.Screen name={"OwnerHome"} component={DrawerNavigation} />
                     <Stack.Screen name={"Trip"} component={TripScreen} />

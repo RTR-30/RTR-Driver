@@ -1,10 +1,14 @@
 import axios from "axios";
-import { BaseUrl, SignUpApi } from "../../../../environment/ApiManager/index";
+import { baseUrl, signUp, SignUpEmailVerify } from "../../../../environment/ApiManager/index";
 
-export const fetchSignUp = ( formData:any) => {
-    return axios.post(BaseUrl + SignUpApi, formData, {
-        headers: {
-            'Content-Type': 'multipart/form-data',
-        }
-    });
+export const fetchSignUp = (data: any) => {
+    return axios.post(`${baseUrl}${signUp}`, data);
+}
+
+export const signUpVerifyingMail = (data:any) => {
+    return axios.post(`${baseUrl}${SignUpEmailVerify.confirmEmail}`, data);
+}
+
+export const signUpVerifyingOtp = (data:any) => {
+    return axios.post(`${baseUrl}${SignUpEmailVerify.verifyEmail}`, data);
 }
