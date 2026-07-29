@@ -28,9 +28,11 @@ import HelpAndFeedback from "../Component/PrivateComponent/CarOwner/HelpAndFeedB
 import ContactUs from "../Component/PrivateComponent/CarOwner/ContactUs/index";
 import OrderHistory from "../Component/PrivateComponent/CarOwner/OrderHistory/index";
 import MyReferal from "../Component/PrivateComponent/CarOwner/MyReferal";
+import Statistics from "../Component/PrivateComponent/CarOwner/Statistics";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { removeOneSignalservice } from "./helper";
+import { COLORS } from "../utils/ColorCode";
 
 
 const Stack = createNativeStackNavigator();
@@ -46,14 +48,14 @@ const CustomDrawerContent = (props: any) => {
             deviceId: playerIds,
             deviceType: Platform.OS === 'ios' ? 'ios' : 'android',
         }
-        try{
+        try {
             const res = await removeOneSignalservice(token, data)
             await AsyncStorage.removeItem("userData");
             await AsyncStorage.clear();
             navigation.navigate("Login");
-        }catch(error){
+        } catch (error) {
             console.log(error);
-            
+
         }
     }
 
@@ -87,11 +89,37 @@ const CustomDrawerContent = (props: any) => {
     return (
         <>
             <DrawerContentScrollView {...props}>
+                <View
+                    style={{
+                        padding: 20,
+                        borderBottomWidth: 1,
+                        borderBottomColor: "#ddd",
+                    }}
+                >
+                    <Text
+                        style={{
+                            fontSize: 22,
+                            fontWeight: "bold",
+                            color: 'black'
+                        }}
+                    >
+                        Menu
+                    </Text>
+
+                    <Text
+                        style={{
+                            color: "#666",
+                            marginTop: 5,
+                        }}
+                    >
+                        Welcome User
+                    </Text>
+                </View>
                 <DrawerItemList {...props} />
             </DrawerContentScrollView>
             <View style={{ height: '20%', width: '100%', justifyContent: 'center', alignItems: 'center' }}>
-                <TouchableOpacity onPress={()=>handleLogout()} className="flex-row w-[25%] justify-around items-center">
-                    <Ionicons name="power" size={25} color={"red"}/>
+                <TouchableOpacity onPress={() => handleLogout()} className="flex-row w-[25%] justify-around items-center">
+                    <Ionicons name="power" size={25} color={"red"} />
                     <Text className="text-[20px] font-bold text-red-500">Logout</Text>
                 </TouchableOpacity>
             </View>
@@ -127,48 +155,57 @@ const DrawerNavigation = () => {
             <Drawer.Screen name="Home" component={OwnerHome} options={{
                 drawerItemStyle: { display: 'none' }
             }} />
-            <Drawer.Screen 
-                name="Profile" 
-                component={ProfileScreen} 
+            <Drawer.Screen
+                name="Profile"
+                component={ProfileScreen}
                 options={{
                     drawerIcon: ({ color, size }) => (
-                        <Ionicons name="person-outline" size={size} color={color} />
+                        <Ionicons name="person-outline" size={size} color={COLORS.primary} />
                     ),
                 }}
             />
-            <Drawer.Screen 
-                name="Order History" 
-                component={OrderHistory} 
+            <Drawer.Screen
+                name="Order History"
+                component={OrderHistory}
                 options={{
                     drawerIcon: ({ color, size }) => (
-                        <Ionicons name="time-outline" size={size} color={color} />
+                        <Ionicons name="time-outline" size={size} color={COLORS.primary} />
                     ),
                 }}
             />
-            <Drawer.Screen 
-                name="Invite Friends" 
-                component={MyReferal} 
+            <Drawer.Screen
+                name="Statistics"
+                component={Statistics}
                 options={{
                     drawerIcon: ({ color, size }) => (
-                        <Ionicons name="people" size={size} color={color} />
+                        <Ionicons name="stats-chart-outline" size={size} color={COLORS.primary} />
                     ),
                 }}
             />
-            <Drawer.Screen 
-                name="Term & Condition" 
-                component={HelpAndFeedback} 
+            <Drawer.Screen
+                name="Invite Friends"
+                component={MyReferal}
                 options={{
                     drawerIcon: ({ color, size }) => (
-                        <Ionicons name="document-text-outline" size={size} color={color} />
+                        <Ionicons name="people-outline" size={size} color={COLORS.primary} />
                     ),
                 }}
             />
-            <Drawer.Screen 
-                name="Contact Us" 
-                component={ContactUs} 
+            <Drawer.Screen
+                name="Term & Condition"
+                component={HelpAndFeedback}
                 options={{
                     drawerIcon: ({ color, size }) => (
-                        <Ionicons name="call-outline" size={size} color={color} />
+                        <Ionicons name="document-text-outline" size={size} color={COLORS.primary} />
+                    ),
+                }}
+            />
+            <Drawer.Screen
+                name="Contact Us"
+                component={ContactUs}
+                options={{
+                    drawerIcon: ({ color, size }) => (
+                        <Ionicons name="call-outline" size={size} color={COLORS.primary} />
                     ),
                 }}
             />

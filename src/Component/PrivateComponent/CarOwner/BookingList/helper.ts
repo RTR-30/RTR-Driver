@@ -2,7 +2,6 @@ import axios from "axios";
 import { bookingBaseUrl, bookingList, getDriverinfo, updateBooking } from "../../../../../environment/ApiManager";
 
 export const FetchBookingList = async (token: any, limit:any, page:any) => {
-    
     return axios.get(`${bookingBaseUrl}${bookingList}`, {
         params:{
             status:"Created,Accepted,InProgress",

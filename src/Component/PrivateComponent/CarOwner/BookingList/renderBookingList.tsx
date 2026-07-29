@@ -7,7 +7,9 @@ import DriverInfoModal from "./DriverInfoModal";
 const RenderBookingList = ({ item, token, handleData }: any) => {
     const [modalVisible, setModalVisible] = useState(false);
     const [partnerDetails, setPartnerDetails] = useState(null);
-
+    console.log('====================================');
+    console.log(item.Status);
+    console.log('====================================');
     const getDriverDetails = async (bookingId: any) => {
         try {
             const res = await getDriverinfoService(token, bookingId);
@@ -116,9 +118,12 @@ const RenderBookingList = ({ item, token, handleData }: any) => {
 
 
                 <View className="flex-row mt-3 w-full justify-around items-center">
-                    <TouchableOpacity onPress={showCancelAlert} className="flex-row w-[40%] h-6 justify-center items-center bg-red-600 rounded-[10px]">
-                        <Text className="text-white text-[14px] ml-2 font-bold">Cancel Booking</Text>
-                    </TouchableOpacity>
+
+                    { item.Status === "Created" ?
+                        <TouchableOpacity onPress={showCancelAlert} className="flex-row w-[40%] h-6 justify-center items-center bg-red-600 rounded-[10px]">
+                            <Text className="text-white text-[14px] ml-2 font-bold">Cancel Booking</Text>
+                        </TouchableOpacity> : null
+                    }
 
                     {
                         item.Status === "Accepted" ? (

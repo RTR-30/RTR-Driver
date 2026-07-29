@@ -204,7 +204,7 @@ const ProfileScreen = () => {
                   keyboardType="email-address"
                   placeholder="Enter Email Address"
                   className="text-base text-black py-4"
-                  readOnly={!edit}
+                  readOnly={true}
                 />
               </View>
             </View>

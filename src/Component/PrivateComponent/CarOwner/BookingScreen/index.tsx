@@ -22,6 +22,7 @@ import ModalBooking from "./modalBookingScreen";
 import { Google_Key } from "../../../../../environment/ApiManager";
 import MapsPage from "./GooglrMap";
 import { COLORS } from "../../../../utils/ColorCode";
+import { showError } from "../../../../Common/ToastMessage";
 
 const BookingScreen = () => {
     const value = "Book Your Trip";
@@ -36,7 +37,9 @@ const BookingScreen = () => {
         latitude: 0,
         longitude: 0,
     });
-
+    console.log('====================================');
+    console.log("dssdsd",JSON.stringify(TripDetails));
+    console.log('====================================');
     const gearTypeData = [
         { label: 'All', value: 'All' },
         { label: 'Automatic', value: 'Automatic' },
@@ -60,7 +63,6 @@ const BookingScreen = () => {
     const [gearType, setGearType] = useState(null);
 
     const [estimateAmount, setEstimateAmount] = useState<any>(null);
-    const [razorpayOrderId, setRazorpayOrderId] = useState<boolean>(false);
 
     const [isVisible, setIsVisible] = useState<boolean>(false);
 
@@ -120,14 +122,14 @@ const BookingScreen = () => {
             "EndDate": null,
             "GearType": gearType,
             "Hours": hours,
-            "EstimateAmount": estimateAmount,
             "LocationCode": {
                 // "lat": currentLocation.latitude,
                 // "long": currentLocation.longitude
                 "lat": 13.051280, "long": 80.213531
             },
             "Status": "Created",
-            "PaymentStatus": razorpayOrderId ? "Paid" : "UnPaid"
+            "PaymentStatus": "UnPaid",
+            "TripTypeId": TripDetails.id
         }
         
         try {   
@@ -142,7 +144,7 @@ const BookingScreen = () => {
             }
         } catch (error: any) {
             
-            ToastAndroid.show(error?.response?.data?.message, ToastAndroid.SHORT);
+            showError(error?.response?.data?.message);
         }
     }
 
@@ -177,10 +179,10 @@ const BookingScreen = () => {
             if (success === true) {
                 setTripData(data)
             } else {
-                console.log(message);
+                showError(message);
             }
         } catch (error) {
-            console.log(error);
+            showError(error);
 
         } finally {
             setLoader(false);
@@ -379,7 +381,7 @@ const BookingScreen = () => {
                             </TouchableOpacity> */}
                         </View>
 
-                        <ModalBooking isVisible={isVisible} token={token} hours={hours} setIsVisible={setIsVisible} setEstimateAmount={setEstimateAmount} handleBooking={handleBooking} setRazorpayOrderId={setRazorpayOrderId} TripDetails={selectedTrip} />
+                        <ModalBooking isVisible={isVisible} token={token} hours={hours} setIsVisible={setIsVisible} setEstimateAmount={setEstimateAmount} handleBooking={handleBooking} TripDetails={selectedTrip} />
                     </ScrollView>
                 </View>
 

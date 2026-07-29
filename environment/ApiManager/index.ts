@@ -7,7 +7,8 @@ export const baseUrl = `${ownBaseUrl}user/`;
 export const bookingBaseUrl = `${ownBaseUrl}booking/`;
 export const paymentBaseUrl = `${ownBaseUrl}payment/`;
 export const forgetBaseUrl = `${ownBaseUrl}forget/`;
-export const deviceBaseUrl = `${ownBaseUrl}user_devices/`
+export const deviceBaseUrl = `${ownBaseUrl}user_devices/`;
+export const FeedBackBaseUrl = `${ownBaseUrl}feedback`;
 
 export const loginUrl = "login";
 export const signUp = "createUser";
@@ -46,4 +47,14 @@ export const OneSignalAPi = {
 
 export const referalApi = {
     referal_history: 'referral/history'
+}
+
+export const statisticsApi = {
+    statistics: 'statistics'
+}
+
+export const FeedbackApis = {
+    Tags: '/tags?targetType=driver',
+    Submit: '/submit',
+    BookingFeedback: '/booking/'
 }
