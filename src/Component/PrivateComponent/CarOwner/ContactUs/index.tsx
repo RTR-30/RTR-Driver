@@ -10,6 +10,7 @@ import {
 import Header from "../../../../Common/Header/index";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { COLORS } from "../../../../utils/ColorCode";
+import { showError } from "../../../../Common/ToastMessage";
 
 const ContactUs = () => {
     const value = "Contact_Us";
@@ -34,7 +35,7 @@ const ContactUs = () => {
                 if (supported) {
                     Linking.openURL(url);
                 } else {
-                    ToastAndroid.show('Phone call not supported on this device', ToastAndroid.SHORT);
+                    showError('Phone call not supported on this device');
                 }
             })
             .catch((err) => console.error('An error occurred', err));
@@ -48,7 +49,7 @@ const ContactUs = () => {
                 if (supported) {
                     Linking.openURL(url);
                 } else {
-                    ToastAndroid.show("WhatsApp is not installed on this device", ToastAndroid.SHORT);
+                    showError("WhatsApp is not installed on this device");
                 }
             })
             .catch((err) => console.error("An error occurred", err));
@@ -62,7 +63,7 @@ const ContactUs = () => {
             if (supported) {
               Linking.openURL(url);
             } else {
-              ToastAndroid.show("No email app installed", ToastAndroid.SHORT);
+              showError("No email app installed");
             }
           })
           .catch((err) => console.error("An error occurred", err));

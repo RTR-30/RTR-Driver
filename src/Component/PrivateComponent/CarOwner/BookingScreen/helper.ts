@@ -1,5 +1,5 @@
 import axios from "axios";
-import { bookingBaseUrl, createBooking, payment, paymentBaseUrl, tripTypeApi } from "../../../../../environment/ApiManager";
+import { bookingBaseUrl, bookingsApis, createBooking, ownBaseUrl, payment, paymentBaseUrl, tripTypeApi } from "../../../../../environment/ApiManager";
 
 export const createBookings = ( token:any, data:any ) => {
     return axios.post(`${bookingBaseUrl}${createBooking}`, data, {
@@ -27,4 +27,12 @@ export const PaymentTypeService = async (id: any, token: any) => {
             "Authorization": `Bearer ${token}`,
         }
     });
+}
+
+export const GetGearTypeService = async (token: any) => {
+    return axios.get(`${ownBaseUrl}${bookingsApis.gearType}`, {
+        headers: {
+            "Authorization": `Bearer ${token}`,
+        }
+    })
 }

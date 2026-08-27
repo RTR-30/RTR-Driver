@@ -3,13 +3,12 @@ import { View, TouchableOpacity, Text, Alert, ToastAndroid } from "react-native"
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { getDriverinfoService, UpdateBooking } from "./helper";
 import DriverInfoModal from "./DriverInfoModal";
+import { showError, showSuccess } from "../../../../Common/ToastMessage";
 
 const RenderBookingList = ({ item, token, handleData }: any) => {
     const [modalVisible, setModalVisible] = useState(false);
     const [partnerDetails, setPartnerDetails] = useState(null);
-    console.log('====================================');
-    console.log(item.Status);
-    console.log('====================================');
+    
     const getDriverDetails = async (bookingId: any) => {
         try {
             const res = await getDriverinfoService(token, bookingId);
@@ -19,7 +18,7 @@ const RenderBookingList = ({ item, token, handleData }: any) => {
                 setModalVisible(true)
             }
         } catch (error: any) {
-            ToastAndroid.show(error, ToastAndroid.SHORT);
+            showError(error);
         }
     }
 
@@ -30,10 +29,10 @@ const RenderBookingList = ({ item, token, handleData }: any) => {
 
         try {
             const res = await UpdateBooking(token, data)
-            ToastAndroid.show(res?.data.message, ToastAndroid.SHORT);
+            showSuccess(res?.data.message);
             handleData(token);
         } catch (error: any) {
-            ToastAndroid.show(error, ToastAndroid.SHORT);
+            showError(error);
         }
     }
 

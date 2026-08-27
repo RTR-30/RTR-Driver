@@ -17,8 +17,6 @@ export type MoreProps = {
 };
 
 const ModalBooking = ({ hours, setIsVisible, isVisible, setEstimateAmount, handleBooking, token, TripDetails }: MoreProps) => {
-    console.log(TripDetails);
-
 
     const descriptionList = TripDetails?.trip_type_description
         ? JSON.parse(TripDetails.trip_type_description)

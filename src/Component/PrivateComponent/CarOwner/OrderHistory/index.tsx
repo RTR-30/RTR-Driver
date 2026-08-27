@@ -11,13 +11,14 @@ import {
 } from "react-native";
 import Header from "../../../../Common/Header/index";
 import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
-import { FetchOrderHistory } from "./helper";
+import { BookingFeedbackService, FetchOrderHistory } from "./helper";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Loader from "../../../../Common/Loader";
 import RenderOrderHistory from "./renderOrderHistory";
 import { RefreshControl } from "react-native-gesture-handler";
 import { noData } from "../../../../Common/Images";
 import { COLORS } from "../../../../utils/ColorCode";
+import { showError } from "../../../../Common/ToastMessage";
 
 const OrderHistory = () => {
 
@@ -35,18 +36,46 @@ const OrderHistory = () => {
     const handleData = async (token: any, limit: any, page: any) => {
         if (footerLoader) {
             setShowLoading(false);
-            // setFooterLoader(false);
         } else {
             setShowLoading(true);
         }
-
+        
         try {
             const response = await FetchOrderHistory(token, limit, page);
-         
-            setListData(response.data.bookingList);
-            setTotalDataList(response?.data.total);
+            const { data: { status = 0 } } = response;
+            
+            if (status === 200) {
+                const bookingList = response.data.bookingList;
+    
+                const updatedList = await Promise.all(
+                    bookingList.map(async (item: any, index: number) => {
+                  
+                      try {
+                        const feedbackRes = await BookingFeedbackService(token, item.Id);
+                        const feedbacks = feedbackRes?.data?.data || [];
+                  
+                        const feedbackGiven = feedbacks.some(
+                          (feedback: any) => feedback.from_type === "user"
+                        );
+                  
+                        return {
+                          ...item,
+                          feedbackGiven,
+                        };
+                      } catch (err) {
+                        return {
+                          ...item,
+                          feedbackGiven: false,
+                        };
+                      }
+                    })
+                  );
+    
+                setListData(updatedList);
+                setTotalDataList(response.data.total);
+            }
         } catch (error) {
-            console.error("Error fetching booking list:", error);
+            showError(error);
         } finally {
             setShowLoading(false);
             setOnRefreshing(false);
@@ -63,7 +92,7 @@ const OrderHistory = () => {
                 handleData(tokens, currentPageLimit, 1);
             }
         } catch (error) {
-            console.error("Error fetching user data from AsyncStorage:", error);
+            showError(error);
         }
     };
 
@@ -74,15 +103,7 @@ const OrderHistory = () => {
         setTotalDataList(null);
         setCurrentPageLimit(10);
         setListData([]);
-        fetchUserData().then(() => {
-            handleData(tokens, currentPageLimit, 1).catch(() => {
-                ToastAndroid.show("Check Internet Connection", ToastAndroid.SHORT);
-            }).finally(() => {
-                setShowLoading(false);
-                setOnRefreshing(false);
-                setFooterLoader(false);
-            })
-        })
+        handleData(tokens, 10, 1);
     }
 
     const renderLoader = () => {
@@ -105,15 +126,6 @@ const OrderHistory = () => {
     useEffect(() => {
         handleData(tokens, currentPageLimit, 1)
     }, [currentPageLimit]);
-
-    // useFocusEffect(
-    //     React.useCallback(() => {
-    //         fetchUserData();
-    //         return () => {
-    //             console.log("OrderHistory screen unfocused");
-    //         };
-    //     }, [])
-    // );
 
     useEffect(()=>{
         fetchUserData();
@@ -152,7 +164,15 @@ const OrderHistory = () => {
                     <View className="flex-[9] bg-white rounded-t-[30px] p-4">
                         <FlatList
                             data={listData}
-                            renderItem={({ item }) => <RenderOrderHistory item={item} setShowLoading={setShowLoading} />}
+                            renderItem={({ item }) => 
+                                <RenderOrderHistory 
+                                    item={item} 
+                                    setShowLoading={setShowLoading} 
+                                    tokens={tokens} 
+                                    handleData={handleData}
+                                    setCurrentPageLimit={setCurrentPageLimit} 
+                                />
+                            }
                             keyExtractor={(item, index) => index.toString()}
                             showsVerticalScrollIndicator={false}
                             refreshControl={<RefreshControl refreshing={onRefreshing} onRefresh={onRefresh} tintColor={"#6200EE"} />}

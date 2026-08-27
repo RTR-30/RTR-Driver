@@ -13,6 +13,7 @@ import { useNavigation } from "@react-navigation/native";
 import { forgetedPassword, VerifyingMail, verifyingOtp } from "./helper";
 import Loader from "../../../Common/Loader";
 import { COLORS } from "../../../utils/ColorCode";
+import { showError, showSuccess } from "../../../Common/ToastMessage";
 
 const forgetPassword = () => {
     const navigation: any = useNavigation();
@@ -35,13 +36,12 @@ const forgetPassword = () => {
         }
         try {
             const res = await VerifyingMail(data);
-            console.log(res);
             
             setMailVerify(res?.data.success)
             setTimer(60);
-            ToastAndroid.show(res?.data.message, ToastAndroid.SHORT);
+            showSuccess(res?.data.message);
         } catch (error) {
-            ToastAndroid.show("invalid mail", ToastAndroid.SHORT);
+            showError("invalid mail");
         } finally {
             setShowLoader(false);
         }
@@ -57,9 +57,9 @@ const forgetPassword = () => {
         try {
             const res = await verifyingOtp(data);
             setOtpVerify(res?.data.success)
-            ToastAndroid.show(res?.data.message, ToastAndroid.SHORT);
+            showSuccess(res?.data.message);
         } catch (error: any) {
-            ToastAndroid.show(error.response.data.message, ToastAndroid.SHORT);
+            showError(error.response.data.message);
         } finally {
             setShowLoader(false);
         }
@@ -69,7 +69,7 @@ const forgetPassword = () => {
         if (newPassword === confirmPassword) {
             resetPasseords()
         } else {
-            ToastAndroid.show("mismatch your confirm password", ToastAndroid.SHORT);
+            showError("mismatch your confirm password");
         }
     }
 
@@ -83,10 +83,10 @@ const forgetPassword = () => {
 
         try {
             const res = await forgetedPassword(data);
-            ToastAndroid.show(res?.data.message, ToastAndroid.SHORT);
+            showSuccess(res?.data.message);
             navigation.navigate("Login");
         } catch (error) {
-            ToastAndroid.show("error", ToastAndroid.SHORT);
+            showError(error);
         } finally {
             setShowLoader(false);
         }
@@ -108,9 +108,7 @@ const forgetPassword = () => {
     }, [timer]);
 
     const handleResend = () => {
-        // console.log('Resend OTP triggered');
         verifyMail();
-        // setTimer(60);
     };
 
     return (

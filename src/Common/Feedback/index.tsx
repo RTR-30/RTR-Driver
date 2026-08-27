@@ -42,8 +42,9 @@ const Feedback = ({ visible, onClose, bookingdata, tokens }: Props) => {
         
         try {
             const res = await submitFeedbackService(payload, tokens);
+            console.log(res);
+            
             const { data: { success = false, message = "", data = {} } } = res;
-            console.log(res?.data);
 
             if (success === true) {
                 showSuccess(message);
@@ -60,7 +61,7 @@ const Feedback = ({ visible, onClose, bookingdata, tokens }: Props) => {
         try {
             const res = await FeedbackTagService(tokens)
             const { data: { success = false, message = "", data = [] } } = res;
-
+            
             if (success === true) {
                 setFeedbackTag(data);
             } else {

@@ -18,6 +18,7 @@ import { FetchLogin, oneSignalservice } from "./helper";
 import Loader from "../../../Common/Loader";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { COLORS } from "../../../utils/ColorCode";
+import { showError } from "../../../Common/ToastMessage";
 
 const LoginImg = require('../../../../assets/Image/Logo.png');
 
@@ -43,11 +44,10 @@ const Login = () => {
         
         try {
             const res = await oneSignalservice(token, data)
-            console.log(res);
             
             navigation.navigate("OwnerHome");
         } catch (error: any) {
-            ToastAndroid.show(error.response.data.message, ToastAndroid.SHORT);
+            showError(error);
         }
     }
 
@@ -67,7 +67,6 @@ const Login = () => {
             "Email": email,
             "Password": password
         }
-        console.log(data);
         
         try {
             const response = await FetchLogin(data);
@@ -88,9 +87,9 @@ const Login = () => {
 
         } catch (error: any) {
             if (error?.response?.data?.message) {
-                ToastAndroid.show(error.response.data.message, ToastAndroid.SHORT);
+                showError(error);
             } else {
-                ToastAndroid.show("Login failed. Please try again.", ToastAndroid.SHORT);
+                showError("Login failed. Please try again.");
             }
 
         } finally {

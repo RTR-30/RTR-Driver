@@ -43,7 +43,6 @@ const Statistics = () => {
         if (selectFilter) {
 
             if (!statisticsData?.startDate || !statisticsData?.endDate) {
-                console.log('toast called');
                 return showError('Start Date & End Date are required');
             }
 
@@ -75,9 +74,7 @@ const Statistics = () => {
         try {
             const res = await StatisticService(tokens, payload)
             const { data: { success = false, data = {} } } = res
-            console.log(
-                JSON.stringify(res?.data)
-            );
+            
 
             if (success === true) {
                 setData(data)
@@ -86,7 +83,6 @@ const Statistics = () => {
             }
 
         } catch (error) {
-            console.log(error);
 
             showError(error)
         } finally {

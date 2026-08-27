@@ -16,7 +16,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import DateTimePicker from "react-native-modal-datetime-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import AntDesign from "react-native-vector-icons/AntDesign";
-import { createBookings, PaymentTypeService } from "./helper";
+import { createBookings, GetGearTypeService, PaymentTypeService } from "./helper";
 import { Picker } from "@react-native-picker/picker";
 import ModalBooking from "./modalBookingScreen";
 import { Google_Key } from "../../../../../environment/ApiManager";
@@ -37,14 +37,12 @@ const BookingScreen = () => {
         latitude: 0,
         longitude: 0,
     });
-    console.log('====================================');
-    console.log("dssdsd",JSON.stringify(TripDetails));
-    console.log('====================================');
-    const gearTypeData = [
-        { label: 'All', value: 'All' },
-        { label: 'Automatic', value: 'Automatic' },
-        { label: 'Manual', value: 'Manual' }
-    ];
+    const [gearTypeData, setGearTypeData] = useState<any[]>([]);
+    // const gearTypeData = [
+    //     { label: 'All', value: 'All' },
+    //     { label: 'Automatic', value: 'Automatic' },
+    //     { label: 'Manual', value: 'Manual' }
+    // ];
 
     const [errData, setErrData] = useState({
         name: false,
@@ -102,7 +100,7 @@ const BookingScreen = () => {
         const hasError = Object.values(errors).some(Boolean);
 
         if (hasError) {
-            ToastAndroid.show("Require all fields", ToastAndroid.SHORT);
+            showError("Require all fields");
         } else {
             const selectedTrips = tripData.find(
                 (item: any) => Number(item.hours) === Number(hours)
@@ -149,16 +147,18 @@ const BookingScreen = () => {
     }
 
     const renderGearTypeData = ({ item }: any) => {
+        console.log(item);
+        
         return (
             <TouchableOpacity
                 style={{ marginHorizontal: 5 }}
-                className={`p-[10px] border rounded-[5px] ${gearType === item.value ? "border-blue-600" : "border-[#ccc]"}`}
+                className={`p-[10px] border rounded-[5px] ${gearType === item.name ? "border-blue-600" : "border-[#ccc]"}`}
                 onPress={() => {
-                    setGearType(item.value)
+                    setGearType(item.name)
                     clearError("gearType");
                 }}
             >
-                <Text className={`${gearType === item.value ? "text-blue-600" : "text-black"}`}>{item.value}</Text>
+                <Text className={`${gearType === item.name ? "text-blue-600" : "text-black"}`}>{item.name}</Text>
             </TouchableOpacity>
         )
     }
@@ -174,7 +174,26 @@ const BookingScreen = () => {
         try {
             const res = await PaymentTypeService(TripDetails.id, token)
             const { success, message, data } = res?.data;
-            console.log("123",JSON.stringify(res));
+            
+            if (success === true) {
+                setTripData(data)
+            } else {
+                showError(message);
+            }
+        } catch (error) {
+            showError(error);
+
+        } finally {
+            setLoader(false);
+        }
+    }
+
+    const fetchGearTypes = async (tokens: any) => {
+        setLoader(true);
+        try {
+            const res = await GetGearTypeService(tokens)
+            const { success, message, data } = res?.data;
+            console.log(res);
             
             if (success === true) {
                 setTripData(data)
@@ -200,6 +219,7 @@ const BookingScreen = () => {
                 const tokens = await AsyncStorage.getItem("token");
                 if (storedUserData && tokens) {
                     setToken(tokens);
+                    fetchGearTypes(tokens)
                 }
             } catch (error) {
                 console.error("Error fetching user data from AsyncStorage:", error);

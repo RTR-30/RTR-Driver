@@ -18,7 +18,7 @@ import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import OneTimeCodeTextComponent from "../../../Common/OneTimeCodeText";
 import { appLogo } from "../../../Common/Images";
 import { COLORS } from "../../../utils/ColorCode";
-import { showError } from "../../../Common/ToastMessage";
+import { showError, showSuccess } from "../../../Common/ToastMessage";
 
 const { width: windowWidth, height: windowHeight } = Dimensions.get("window");
 const SignUpImg = require("../../../../assets/Image/SignUp.png")
@@ -76,13 +76,11 @@ const SignUp = () => {
 
             try {
                 const response = await signUpVerifyingMail(data)
-                ToastAndroid.show(response?.data.message, ToastAndroid.SHORT);
+                showSuccess(response?.data.message);
 
                 toggleModal()
             } catch (error: any) {
-                console.log(error, "error");
-
-                ToastAndroid.show(error.response.data.message, ToastAndroid.SHORT)
+                showError(error);
             } finally {
                 setShowLoader(false);
             }
@@ -103,7 +101,7 @@ const SignUp = () => {
                 handleSignUp();
             }
         } catch (error: any) {
-            ToastAndroid.show(error.response.data.message, ToastAndroid.SHORT);
+            showError(error);
         } finally {
             setShowLoader(false);
         }
@@ -126,7 +124,7 @@ const SignUp = () => {
 
             if (response.status === 200) {
 
-                ToastAndroid.show(response?.data.message, ToastAndroid.SHORT);
+                showSuccess(response?.data.message);
                 setName("");
                 setEmail("");
                 setMobileNo("");

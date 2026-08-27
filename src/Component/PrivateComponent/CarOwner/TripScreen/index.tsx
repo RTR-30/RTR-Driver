@@ -20,6 +20,7 @@ import { useNavigation } from "@react-navigation/native";
 import { tripTypeService } from "./helpder";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { COLORS } from "../../../../utils/ColorCode";
+import { showError } from "../../../../Common/ToastMessage";
 
 const Thinking = require("../../../../../assets/Image/Thinking.png")
 
@@ -38,11 +39,10 @@ const TripScreen = () => {
             if (success === true) {
                 setTriptype(data);
             } else {
-                console.log(message);
+                showError(message);
             }
         } catch (error) {
-            console.log(error);
-
+            showError(error);
         } finally {
             setLoader(false)
         }

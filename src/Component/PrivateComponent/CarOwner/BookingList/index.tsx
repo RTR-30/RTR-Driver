@@ -19,6 +19,7 @@ import RenderBookingList from "./renderBookingList";
 import Loader from "../../../../Common/Loader/index";
 import { noData } from "../../../../Common/Images";
 import { COLORS } from "../../../../utils/ColorCode";
+import { showError } from "../../../../Common/ToastMessage";
 
 const BookingList = () => {
     const navigation = useNavigation();
@@ -77,7 +78,7 @@ const BookingList = () => {
         setListData([]);
         fetchUserData().then(() => {
             handleData(token, currentPageLimit, 1).catch(() => {
-                ToastAndroid.show("Check Internet Connection", ToastAndroid.SHORT);
+                showError("Check Internet Connection");
             }).finally(() => {
                 setShowLoading(false);
                 setOnRefreshing(false);

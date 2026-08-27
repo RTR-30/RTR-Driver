@@ -1,14 +1,6 @@
 import axios from "axios"
 import { FeedbackApis, FeedBackBaseUrl } from "../../../environment/ApiManager"
 
-export const BookingFeedbackService = (token: any, id: any) => {
-    return axios.get(`${FeedBackBaseUrl}${FeedbackApis?.BookingFeedback}${id}`, {
-        headers: {
-            "Authorization": `Bearer ${token}`,
-        }
-    })
-}
-
 export const FeedbackTagService = (token: any) => {
     return axios.get(`${FeedBackBaseUrl}${FeedbackApis?.Tags}`, {
         headers: {

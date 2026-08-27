@@ -1,5 +1,5 @@
 import axios from "axios";
-import { bookingBaseUrl, bookingList } from "../../../../../environment/ApiManager";
+import { bookingBaseUrl, bookingList, FeedbackApis, FeedBackBaseUrl } from "../../../../../environment/ApiManager";
 
 export const FetchOrderHistory = async (token: any, limit: any, page:any) => {
     
@@ -13,4 +13,12 @@ export const FetchOrderHistory = async (token: any, limit: any, page:any) => {
             "Authorization": `Bearer ${token}`,
         }
     });
+}
+
+export const BookingFeedbackService = (token: any, id: any) => {
+    return axios.get(`${FeedBackBaseUrl}${FeedbackApis?.BookingFeedback}${id}`, {
+        headers: {
+            "Authorization": `Bearer ${token}`,
+        }
+    })
 }

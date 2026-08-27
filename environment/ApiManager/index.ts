@@ -1,7 +1,7 @@
 export const Google_Key = "AIzaSyBgUp4ddMRJBFN8VuDL-Xfo75m0lIyHHts";
 export const AppID = "63b4b0ba-aa00-4409-aaad-c2d75eb8ff86";
 
-export const ownBaseUrl = "http://192.168.29.53:8000/";
+export const ownBaseUrl = "http://10.40.188.206:8000/";
 
 export const baseUrl = `${ownBaseUrl}user/`;
 export const bookingBaseUrl = `${ownBaseUrl}booking/`;
@@ -24,6 +24,9 @@ export const updateBooking = "updateBooking";
 export const getDriverinfo = "partner-details";
 
 export const updateUser = "updateUser";
+export const bookingsApis = {
+    gearType: 'admin/gear-types'
+}
 
 export const payment = {
     createOrders : "create-order",
@@ -42,7 +45,7 @@ export const tripTypeApi = {
 }
 
 export const OneSignalAPi = {
-    "UserDevices" : "user/devices"
+    UserDevices : "user/devices"
 }
 
 export const referalApi = {

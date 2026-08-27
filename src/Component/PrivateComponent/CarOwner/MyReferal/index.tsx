@@ -41,7 +41,6 @@ const MyReferal = () => {
         try {
             const res = await referalHistoryService(token)
             const { data: { history = [], success = false } } = res
-            console.log(history);
 
             if (success === true) {
                 setReferalHistory(history)
@@ -72,7 +71,7 @@ const MyReferal = () => {
             setLoading(false);
         }
     }
-
+    
     const formatDateTime = (dateString: any) => {
         const date = new Date(dateString);
 
