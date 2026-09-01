@@ -52,7 +52,7 @@ const ProfileScreen = () => {
     }
 
     try {
-      const res = await updateingUser(payload, token)
+      const res = await updateingUser(payload)
       const { data: { status = 0, message = '', user = {} } } = res
       if(status === 200){
         await AsyncStorage.setItem("UserData", JSON.stringify(user));
@@ -77,7 +77,6 @@ const ProfileScreen = () => {
   const fetchUserData = async () => {
     try {
       const storedUserData: any = await AsyncStorage.getItem("UserData");
-      const tokens: any = await AsyncStorage.getItem("token");
 
       if (storedUserData) {
         const parsedUser = JSON.parse(storedUserData);
@@ -88,7 +87,6 @@ const ProfileScreen = () => {
           address: parsedUser?.Address,
           img: parsedUser?.ProfilePic
         }); // from backend
-        setToken(tokens);
       }
 
     } catch (error) {

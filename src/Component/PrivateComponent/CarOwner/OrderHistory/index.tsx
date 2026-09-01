@@ -23,7 +23,6 @@ import { showError } from "../../../../Common/ToastMessage";
 const OrderHistory = () => {
 
     const value = "Order History";
-    const [tokens, setTokens] = useState<any>(null);
 
     const [showLoading, setShowLoading] = useState<boolean>(false);
     const [onRefreshing, setOnRefreshing] = useState<boolean>(false);
@@ -33,7 +32,7 @@ const OrderHistory = () => {
     const [listData, setListData] = useState<any[]>([]);
     const [totalDataList, setTotalDataList] = useState<any>(null);
 
-    const handleData = async (token: any, limit: any, page: any) => {
+    const handleData = async (limit: any, page: any) => {
         if (footerLoader) {
             setShowLoading(false);
         } else {
@@ -41,7 +40,7 @@ const OrderHistory = () => {
         }
         
         try {
-            const response = await FetchOrderHistory(token, limit, page);
+            const response = await FetchOrderHistory(limit, page);
             const { data: { status = 0 } } = response;
             
             if (status === 200) {
@@ -51,7 +50,7 @@ const OrderHistory = () => {
                     bookingList.map(async (item: any, index: number) => {
                   
                       try {
-                        const feedbackRes = await BookingFeedbackService(token, item.Id);
+                        const feedbackRes = await BookingFeedbackService(item.Id);
                         const feedbacks = feedbackRes?.data?.data || [];
                   
                         const feedbackGiven = feedbacks.some(
@@ -83,19 +82,6 @@ const OrderHistory = () => {
         }
     };
     
-    const fetchUserData = async () => {
-        try {
-            const tokens: any = await AsyncStorage.getItem("token");
-
-            if (tokens) {
-                setTokens(tokens);
-                handleData(tokens, currentPageLimit, 1);
-            }
-        } catch (error) {
-            showError(error);
-        }
-    };
-
     const onRefresh = () => {
         setOnRefreshing(true);
         setShowLoading(false);
@@ -103,7 +89,7 @@ const OrderHistory = () => {
         setTotalDataList(null);
         setCurrentPageLimit(10);
         setListData([]);
-        handleData(tokens, 10, 1);
+        handleData(10, 1);
     }
 
     const renderLoader = () => {
@@ -124,11 +110,11 @@ const OrderHistory = () => {
     }
 
     useEffect(() => {
-        handleData(tokens, currentPageLimit, 1)
+        handleData(currentPageLimit, 1)
     }, [currentPageLimit]);
 
     useEffect(()=>{
-        fetchUserData();
+        handleData(currentPageLimit, 1);
     },[])
 
     return (
@@ -167,8 +153,7 @@ const OrderHistory = () => {
                             renderItem={({ item }) => 
                                 <RenderOrderHistory 
                                     item={item} 
-                                    setShowLoading={setShowLoading} 
-                                    tokens={tokens} 
+                                    setShowLoading={setShowLoading}
                                     handleData={handleData}
                                     setCurrentPageLimit={setCurrentPageLimit} 
                                 />

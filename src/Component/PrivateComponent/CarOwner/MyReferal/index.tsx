@@ -35,11 +35,11 @@ const MyReferal = () => {
     };
 
 
-    const fetchReferalHistory = async (token: any) => {
+    const fetchReferalHistory = async () => {
         setLoading(true);
 
         try {
-            const res = await referalHistoryService(token)
+            const res = await referalHistoryService()
             const { data: { history = [], success = false } } = res
 
             if (success === true) {
@@ -87,15 +87,13 @@ const MyReferal = () => {
     useEffect(() => {
         const getUserData = async () => {
             const user: any = await AsyncStorage.getItem("UserData");
-            const token: any = await AsyncStorage.getItem("token")
-
             if (user) {
                 setUserData(JSON.parse(user));
-                await fetchReferalHistory(token)
             }
         }
 
         getUserData();
+        fetchReferalHistory()
     }, []);
 
     return (

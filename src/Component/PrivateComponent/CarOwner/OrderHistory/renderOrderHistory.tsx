@@ -7,7 +7,7 @@ import { BookingFeedbackService } from "./helper";
 import { COLORS } from "../../../../utils/ColorCode";
 import Feedback from "../../../../Common/Feedback";
 
-const RenderOrderHistory = ({ item, setShowLoading, tokens, handleData, setCurrentPageLimit }: any) => {
+const RenderOrderHistory = ({ item, setShowLoading, handleData, setCurrentPageLimit }: any) => {
     const [selectedBookingId, setSelectedBookingId] = useState<any>();
     const [showFeedback, setShowFeedback] = useState<boolean>(false);
 
@@ -15,11 +15,10 @@ const RenderOrderHistory = ({ item, setShowLoading, tokens, handleData, setCurre
         setSelectedBookingId(bookingid)
         setShowFeedback(true);
     }
-    console.log(item);
 
     const closeFeedbackModal = () => {
         setCurrentPageLimit(10)
-        handleData(tokens, 10, 1)
+        handleData(10, 1)
         setShowFeedback(false);
     }
     return (
@@ -82,7 +81,6 @@ const RenderOrderHistory = ({ item, setShowLoading, tokens, handleData, setCurre
                     visible={showFeedback}
                     onClose={() => closeFeedbackModal()}
                     bookingdata={selectedBookingId}
-                    tokens={tokens}
                 /> : null
             }
         </View>

@@ -49,12 +49,9 @@ const CustomDrawerContent = (props: any) => {
             deviceId: playerIds,
             deviceType: Platform.OS === 'ios' ? 'ios' : 'android',
         }
-        console.log(data);
-        console.log(token);
         
         try {
             const res = await removeOneSignalservice(token, data)
-            console.log(res);
             
             await AsyncStorage.removeItem("userData");
             await AsyncStorage.clear();

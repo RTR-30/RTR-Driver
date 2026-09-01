@@ -1,10 +1,6 @@
-import axios from "axios";
 import { paymentBaseUrl, tripTypeApi } from "../../../../../environment/ApiManager";
+import { Get } from "../../../../Common/HttpService";
 
 export const tripTypeService = async (token: any) => {
-    return axios.get(`${paymentBaseUrl}${tripTypeApi.tripTypes}`, {
-        headers: {
-            "Authorization": `Bearer ${token}`,
-        }
-    });
+    return Get(`${paymentBaseUrl}${tripTypeApi.tripTypes}`, "rtrToken")
 }

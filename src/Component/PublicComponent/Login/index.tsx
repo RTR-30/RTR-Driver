@@ -36,18 +36,25 @@ const Login = () => {
     const [errEmail, setErrEmail] = useState<boolean>(false);
     const [errPassword, setErrPassword] = useState<boolean>(false);
     
-    const oneSignalStoreId = async (token: any) => {
+    const oneSignalStoreId = async () => {
+        setShowLoader(true)
         const data = {
             deviceId: playerIds,
             deviceType: Platform.OS === 'ios' ? 'ios' : 'android',
         }
         
         try {
-            const res = await oneSignalservice(token, data)
-            
-            navigation.navigate("OwnerHome");
+            const res = await oneSignalservice(data)
+            const { success = false, message = '' } = res;
+            if(success){
+                navigation.navigate("OwnerHome");
+            } else {
+                showError(message)
+            }
         } catch (error: any) {
             showError(error);
+        } finally {
+            setShowLoader(false)
         }
     }
 
@@ -70,13 +77,12 @@ const Login = () => {
         
         try {
             const response = await FetchLogin(data);
-            console.log(response);
             
             if (response.status === 200) {
                 // ONESIGNAL_PLAYER_ID
                 await AsyncStorage.setItem("UserData", JSON.stringify(response.data.user));
                 await AsyncStorage.setItem("token", response.data.token);
-                await oneSignalStoreId(response?.data?.token);
+                await oneSignalStoreId();
                 // navigation.navigate("OwnerHome")
                 setEmail(null);
                 setPassword(null);

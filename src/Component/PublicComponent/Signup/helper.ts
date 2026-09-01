@@ -1,14 +1,14 @@
-import axios from "axios";
 import { baseUrl, signUp, SignUpEmailVerify } from "../../../../environment/ApiManager/index";
+import { withoutTokenPost } from "../../../Common/HttpService";
 
 export const fetchSignUp = (data: any) => {
-    return axios.post(`${baseUrl}${signUp}`, data);
+    return withoutTokenPost(`${baseUrl}${signUp}`, data);
 }
 
 export const signUpVerifyingMail = (data:any) => {
-    return axios.post(`${baseUrl}${SignUpEmailVerify.confirmEmail}`, data);
+    return withoutTokenPost(`${baseUrl}${SignUpEmailVerify.confirmEmail}`, data);
 }
 
 export const signUpVerifyingOtp = (data:any) => {
-    return axios.post(`${baseUrl}${SignUpEmailVerify.verifyEmail}`, data);
+    return withoutTokenPost(`${baseUrl}${SignUpEmailVerify.verifyEmail}`, data);
 }

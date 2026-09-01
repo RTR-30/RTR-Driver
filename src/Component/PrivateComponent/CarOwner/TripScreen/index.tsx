@@ -21,6 +21,7 @@ import { tripTypeService } from "./helpder";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { COLORS } from "../../../../utils/ColorCode";
 import { showError } from "../../../../Common/ToastMessage";
+import Ionicons from "react-native-vector-icons/Ionicons";
 
 const Thinking = require("../../../../../assets/Image/Thinking.png")
 
@@ -35,7 +36,7 @@ const TripScreen = () => {
         try {
             const res = await tripTypeService(token)
             const { success, message, data } = res?.data;
-            
+
             if (success === true) {
                 setTriptype(data);
             } else {
@@ -65,8 +66,8 @@ const TripScreen = () => {
     }, []);
 
     return (
-        <View className="flex-1" style={{backgroundColor: COLORS.primary}}>
-            <View className="flex-1 justify-center items-center" style={{backgroundColor: COLORS.primary}}>
+        <View className="flex-1" style={{ backgroundColor: COLORS.primary }}>
+            <View className="flex-1 justify-center items-center" style={{ backgroundColor: COLORS.primary }}>
                 <Header value={value} />
             </View>
 
@@ -79,25 +80,23 @@ const TripScreen = () => {
                 <FlatList
                     data={triptypes}
                     keyExtractor={(item: any) => item.id.toString()}
-                    contentContainerStyle={{ padding: 20 }}
+                    // contentContainerStyle={{ padding: 20 }}
                     showsVerticalScrollIndicator={false}
                     columnWrapperStyle={{
                         justifyContent: "space-between",
-                        marginBottom: 15,
+                        // marginBottom: 15,
                     }}
                     numColumns={2}
                     renderItem={({ item }: any) => (
-                        <View style={{height:100, width:'40%', justifyContent:'center', alignItems:'center'}}>
-                        <TouchableOpacity
-                            onPress={()=>navigation.navigate("Booking", {TripDetails:item})}
-                            className="bg-white w-[100%] h-[100%] mb-15 p-15 rounded-2xl border border-black flex-row justify-center items-center"
-                        >
-                            <View>
-                                <Text className="text-lg font-semibold text-center text-black">
-                                    {item.trip_type}
-                                </Text>
-                            </View>
-                        </TouchableOpacity>
+                        <View className="mt-3" style={{ width: '48%', justifyContent: 'center', alignItems: 'center' }}>
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate("Booking", { TripDetails: item })}
+                                style={{ elevation: 3 }}
+                                className="bg-white w-[100%] p-2 border-black border-[0.5px] justify-center items-center shadow-md shadow-black rounded-tl-3xl rounded-br-3xl"
+                            >
+                                <Ionicons name="car-sport" size={30} color={"black"} />
+                                <Text className="text-lg font-semibold text-center" style={{color: COLORS.primary}}>{item.trip_type}</Text>
+                            </TouchableOpacity>
                         </View>
                     )}
                 />

@@ -5,13 +5,13 @@ import { getDriverinfoService, UpdateBooking } from "./helper";
 import DriverInfoModal from "./DriverInfoModal";
 import { showError, showSuccess } from "../../../../Common/ToastMessage";
 
-const RenderBookingList = ({ item, token, handleData }: any) => {
+const RenderBookingList = ({ item, onRefresh }: any) => {
     const [modalVisible, setModalVisible] = useState(false);
     const [partnerDetails, setPartnerDetails] = useState(null);
     
     const getDriverDetails = async (bookingId: any) => {
         try {
-            const res = await getDriverinfoService(token, bookingId);
+            const res = await getDriverinfoService(bookingId);
             if (res?.data?.success === true) {
                 const { partnerDetails } = res?.data;
                 setPartnerDetails(partnerDetails);
@@ -28,9 +28,14 @@ const RenderBookingList = ({ item, token, handleData }: any) => {
         }
 
         try {
-            const res = await UpdateBooking(token, data)
-            showSuccess(res?.data.message);
-            handleData(token);
+            const res = await UpdateBooking(data)
+            const { data: { message = '', success = false } } = res
+            if(success){
+                showSuccess(res?.data.message);
+                onRefresh();
+            } else {
+                showError(message);
+            }
         } catch (error: any) {
             showError(error);
         }
@@ -72,10 +77,9 @@ const RenderBookingList = ({ item, token, handleData }: any) => {
         );
     };
 
-
     return (
         <View className="flex-1">
-            <View className={`w-[40%] rounded-tl-[10px] rounded-tr-[50%] border-t-[1px] border-l-[1px] border-r-[1px] border-black justify-center items-center ${item.Status === "Created" ? "bg-green-600" : item.Status === "Accepted" ? "bg-blue-600" : "bg-red-600"}`}>
+            <View className={`w-[40%] rounded-tl-[10px] rounded-t-md border-t-[1px] border-[0.5px] border-r-[1px] border-black justify-center items-center ${item.Status === "Created" ? "bg-green-600" : item.Status === "Accepted" ? "bg-blue-600" : "bg-red-600"}`}>
                 <Text className="text-center text-[18px] text-white font-semibold">{item?.Status}</Text>
             </View>
 
@@ -107,11 +111,13 @@ const RenderBookingList = ({ item, token, handleData }: any) => {
                                 <Text className="left-2 text-black font-semibold">Start Data : {formatDateTime(item.StartDate)}</Text>
                             </View>
                         </View>
-
-                        <View className="flex-row w-[80%] self-center mt-2 p-2 rounded-[10%] justify-center items-center bg-green-700">
-                            <Text className="text-white font-semibold">OTP</Text>
-                            <Text className="text-white font-semibold">: {item?.OTP !== null ? item?.OTP : "Driver Not Accept"}</Text>
-                        </View>
+                        
+                        {item?.OTP !== null ?
+                            <View className="flex-row w-[80%] self-center mt-2 p-2 rounded-md justify-center items-center bg-green-400">
+                                <Text className="text-black font-semibold text-[12px]">OTP </Text>
+                                <Text className="text-black font-semibold text-[12px]">: {item?.OTP}</Text>
+                            </View> : null
+                        }
                     </View>
                 </View>
 
@@ -119,7 +125,7 @@ const RenderBookingList = ({ item, token, handleData }: any) => {
                 <View className="flex-row mt-3 w-full justify-around items-center">
 
                     { item.Status === "Created" ?
-                        <TouchableOpacity onPress={showCancelAlert} className="flex-row w-[40%] h-6 justify-center items-center bg-red-600 rounded-[10px]">
+                        <TouchableOpacity onPress={showCancelAlert} className="flex-row w-[80%] p-2 justify-center items-center bg-red-600 rounded-[10px]">
                             <Text className="text-white text-[14px] ml-2 font-bold">Cancel Booking</Text>
                         </TouchableOpacity> : null
                     }

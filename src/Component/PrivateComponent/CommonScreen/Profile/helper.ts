@@ -1,22 +1,8 @@
 import axios from "axios";
 import { baseUrl, updateUser} from "../../../../../environment/ApiManager/index";
+import { Put } from "../../../../Common/HttpService";
 
 
-export const updateingUser = (data: any, token: any) => {
-    return axios.put(`${baseUrl}${updateUser}`, data, {
-        headers:{
-            Authorization: `Bearer ${token}`,
-        }
-    })
+export const updateingUser = (data: any) => {
+    return Put(`${baseUrl}${updateUser}`, data, "rtrToken")
 }
-
-// export const UpdateBooking = async (token:any, data:any) => {
-//     return axios.put(`${bookingBaseUrl}${updateBooking}`, data,{
-//         params:{
-//             status:"Cancelled",            
-//         },
-//         headers:{
-//             Authorization: `Bearer ${token}`,
-//         }
-//     })
-// }

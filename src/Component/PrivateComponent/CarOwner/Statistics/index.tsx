@@ -19,7 +19,6 @@ const Statistics = () => {
     const value = "Statistics";
 
     const [loading, setLoading] = useState<boolean>(false);
-    const [token, setToken] = useState<any>(null);
     const [data, setData] = useState<any>({});
 
     const [startDate, setStartDate] = useState<any>();
@@ -39,7 +38,7 @@ const Statistics = () => {
         endDate: ''
     })
 
-    const chooseFilter = async (selectFilter: any, values?: any, tokens?: any) => {
+    const chooseFilter = async (selectFilter: any, values?: any) => {
         if (selectFilter) {
 
             if (!statisticsData?.startDate || !statisticsData?.endDate) {
@@ -54,7 +53,7 @@ const Statistics = () => {
                 ...statisticsData,
                 filter: defaultValue,
             })
-            fetchData(token, payload)
+            fetchData(payload)
 
         } else {
 
@@ -65,25 +64,22 @@ const Statistics = () => {
             const payload = await {
                 filter: values
             }
-            fetchData(tokens, payload)
+            fetchData(payload)
         }
     }
 
-    const fetchData = async (tokens?: any, payload?: any) => {
+    const fetchData = async (payload?: any) => {
         setLoading(true)
         try {
-            const res = await StatisticService(tokens, payload)
-            const { data: { success = false, data = {} } } = res
+            const res = await StatisticService(payload)
+            const { data: { success = false, data = {} } } = res;
             
-
             if (success === true) {
                 setData(data)
             } else {
                 showError("Something went wrong")
             }
-
         } catch (error) {
-
             showError(error)
         } finally {
             setLoading(false)
@@ -96,20 +92,8 @@ const Statistics = () => {
         ).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
     };
 
-    const fetchUserData = async () => {
-        try {
-            const tokens: any = await AsyncStorage.getItem("token");
-            if (tokens) {
-                await setToken(tokens);
-                chooseFilter(false, statisticsData?.filter, tokens)
-            }
-        } catch (error) {
-            showError(error);
-        }
-    };
-
     useEffect(() => {
-        fetchUserData()
+        chooseFilter(false, statisticsData?.filter)
     }, [])
 
     return (
@@ -130,9 +114,9 @@ const Statistics = () => {
                                 key={index}
                                 onPress={() =>
 
-                                    chooseFilter(false, item.value, token)
+                                    chooseFilter(false, item.value)
                                 }
-                                className={`mr-3 px-4 py-2 rounded-xl justify-center items-center w-28`}
+                                className={`mr-3 px-4 rounded-xl justify-center items-center w-28`}
                                 style={{ backgroundColor: statisticsData.filter === item.value ? COLORS.primary : 'lightgray' }}
                             >
                                 <Text

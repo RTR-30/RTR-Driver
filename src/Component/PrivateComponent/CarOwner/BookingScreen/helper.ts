@@ -1,38 +1,23 @@
 import axios from "axios";
 import { bookingBaseUrl, bookingsApis, createBooking, ownBaseUrl, payment, paymentBaseUrl, tripTypeApi } from "../../../../../environment/ApiManager";
+import { Get, Post } from "../../../../Common/HttpService";
 
-export const createBookings = ( token:any, data:any ) => {
-    return axios.post(`${bookingBaseUrl}${createBooking}`, data, {
-        headers: {
-            Authorization: `Bearer ${token}`,
-        }
-    });
+export const createBookings = ( data:any ) => {
+    return Post(`${bookingBaseUrl}${createBooking}`, data, "rtrToken")
 }
 
-export const createOrder = (token:any, data:any) => {
-    return axios.post(`${paymentBaseUrl}${payment.createOrders}`, data, {
-        headers: {
-            Authorization: `Bearer ${token}`,
-        }
-    })
+export const createOrder = (data:any) => {
+    return Post(`${paymentBaseUrl}${payment.createOrders}`, data, "rtrToken")
 }
 
 export const verifyPayments = (data:any) => {
-    return axios.post(`${paymentBaseUrl}${payment.verifyPayment}`, data)
+    return Post(`${paymentBaseUrl}${payment.verifyPayment}`, data, "rtrToken")
 }
 
-export const PaymentTypeService = async (id: any, token: any) => {
-    return axios.get(`${paymentBaseUrl}${tripTypeApi.tripTypePament}${id}`, {
-        headers: {
-            "Authorization": `Bearer ${token}`,
-        }
-    });
+export const PaymentTypeService = async (id: any) => {
+    return Get(`${paymentBaseUrl}${tripTypeApi.tripTypePament}${id}`, "rtrToken")
 }
 
-export const GetGearTypeService = async (token: any) => {
-    return axios.get(`${ownBaseUrl}${bookingsApis.gearType}`, {
-        headers: {
-            "Authorization": `Bearer ${token}`,
-        }
-    })
+export const GetGearTypeService = async () => {
+    return Get(`${ownBaseUrl}${bookingsApis.gearType}`, 'rtrToken')
 }

@@ -1,24 +1,11 @@
 import axios from "axios";
 import { bookingBaseUrl, bookingList, FeedbackApis, FeedBackBaseUrl } from "../../../../../environment/ApiManager";
+import { Get } from "../../../../Common/HttpService";
 
-export const FetchOrderHistory = async (token: any, limit: any, page:any) => {
-    
-    return axios.get(`${bookingBaseUrl}${bookingList}`, {
-        params:{
-            status:"Cancelled,Closed",
-            limit:limit,
-            page:page
-        },
-        headers: {
-            "Authorization": `Bearer ${token}`,
-        }
-    });
+export const FetchOrderHistory = async (limit: any, page:any) => {
+    return Get(`${bookingBaseUrl}${bookingList}?status=Cancelled,Closed&limit=${limit}&page=${page}`, "rtrToken")
 }
 
-export const BookingFeedbackService = (token: any, id: any) => {
-    return axios.get(`${FeedBackBaseUrl}${FeedbackApis?.BookingFeedback}${id}`, {
-        headers: {
-            "Authorization": `Bearer ${token}`,
-        }
-    })
+export const BookingFeedbackService = (id: any) => {
+    return Get(`${FeedBackBaseUrl}${FeedbackApis?.BookingFeedback}${id}`, "rtrToken")
 }

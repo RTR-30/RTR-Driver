@@ -24,7 +24,6 @@ import { showError } from "../../../../Common/ToastMessage";
 const BookingList = () => {
     const navigation = useNavigation();
     const route = useRoute();
-    const [token, setToken] = useState<any>(null);
 
     const value = "Booking Updates";
 
@@ -36,7 +35,7 @@ const BookingList = () => {
     const [listData, setListData] = useState<any[]>([]);
     const [totalDataList, setTotalDataList] = useState<any>(null);
 
-    const handleData = async (token: any, limit: any, page: any) => {
+    const handleData = async (limit: any, page: any) => {
         if (footerLoader) {
             setShowLoading(false);
         } else {
@@ -44,7 +43,7 @@ const BookingList = () => {
         }
 
         try {
-            const response = await FetchBookingList(token, limit, page);
+            const response = await FetchBookingList(limit, page);
             setTotalDataList(response.data.total)
             setListData(response.data.bookingList);
         } catch (error) {
@@ -55,20 +54,7 @@ const BookingList = () => {
             setFooterLoader(false);
         }
     };
-
-    const fetchUserData = async () => {
-        try {
-            const storedUserData = await AsyncStorage.getItem("UserData");
-            const tokens: any = await AsyncStorage.getItem("token");
-            if (storedUserData || tokens) {
-                setToken(tokens);
-                await handleData(tokens, currentPageLimit, 1);
-            }
-        } catch (error) {
-            console.error("Error fetching user data from AsyncStorage:", error);
-        }
-    };
-
+    
     const onRefresh = () => {
         setOnRefreshing(true);
         setShowLoading(false);
@@ -76,15 +62,7 @@ const BookingList = () => {
         setTotalDataList(null);
         setCurrentPageLimit(10);
         setListData([]);
-        fetchUserData().then(() => {
-            handleData(token, currentPageLimit, 1).catch(() => {
-                showError("Check Internet Connection");
-            }).finally(() => {
-                setShowLoading(false);
-                setOnRefreshing(false);
-                setFooterLoader(false);
-            })
-        })
+        handleData(currentPageLimit, 1)
     }
 
     const loadMore = () => {
@@ -106,7 +84,7 @@ const BookingList = () => {
     }
 
     useEffect(() => {
-        fetchUserData();
+        handleData(currentPageLimit, 1);
     }, []);
 
     return (
@@ -151,7 +129,7 @@ const BookingList = () => {
                     >
                         <FlatList
                             data={listData}
-                            renderItem={({ item }) => <RenderBookingList item={item} token={token} handleData={handleData} />}
+                            renderItem={({ item }) => <RenderBookingList item={item} onRefresh={onRefresh} />}
                             keyExtractor={(item, index) => index.toString()}
                             showsVerticalScrollIndicator={false}
                             refreshControl={<RefreshControl refreshing={onRefreshing} onRefresh={onRefresh} tintColor={"#6200EE"} />}

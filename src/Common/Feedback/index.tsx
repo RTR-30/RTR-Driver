@@ -9,10 +9,9 @@ interface Props {
     visible: boolean;
     onClose: () => void;
     bookingdata: any;
-    tokens: any;
 }
 
-const Feedback = ({ visible, onClose, bookingdata, tokens }: Props) => {
+const Feedback = ({ visible, onClose, bookingdata }: Props) => {
     const [feedbackTag, setFeedbackTag] = useState<any[]>([]);
 
     const [feedback, setFeedback] = useState<any>({
@@ -41,8 +40,7 @@ const Feedback = ({ visible, onClose, bookingdata, tokens }: Props) => {
         }
         
         try {
-            const res = await submitFeedbackService(payload, tokens);
-            console.log(res);
+            const res = await submitFeedbackService(payload);
             
             const { data: { success = false, message = "", data = {} } } = res;
 
@@ -59,7 +57,7 @@ const Feedback = ({ visible, onClose, bookingdata, tokens }: Props) => {
 
     const fetchFeedbackTages = async () => {
         try {
-            const res = await FeedbackTagService(tokens)
+            const res = await FeedbackTagService()
             const { data: { success = false, message = "", data = [] } } = res;
             
             if (success === true) {

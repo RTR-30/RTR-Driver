@@ -23,6 +23,7 @@ import { Google_Key } from "../../../../../environment/ApiManager";
 import MapsPage from "./GooglrMap";
 import { COLORS } from "../../../../utils/ColorCode";
 import { showError } from "../../../../Common/ToastMessage";
+import Loader from "../../../../Common/Loader";
 
 const BookingScreen = () => {
     const value = "Book Your Trip";
@@ -31,7 +32,6 @@ const BookingScreen = () => {
     const { TripDetails }: any = route.params || {};
     const [tripData, setTripData] = useState<any>(null);
     const [selectedTrip, setSelectedTrip] = useState<any>(null);
-    const [token, setToken] = useState<any>(null);
     const [loader, setLoader] = useState<boolean>(false);
     const [currentLocation, setCurrentLocation] = useState<any>({
         latitude: 0,
@@ -83,7 +83,7 @@ const BookingScreen = () => {
     const clearError = (key: keyof typeof errData) => {
         setErrData(prev => ({ ...prev, [key]: false }));
     };
-    
+
     const goTOContinue = () => {
 
         const errors = {
@@ -110,28 +110,27 @@ const BookingScreen = () => {
         }
     };
 
-
     const handleBooking = async () => {
-        const data = {
-            "Name": name,
-            "Address": address,
-            "MobileNo": mobileNumber,
-            "StartDate": startDate.toString(),
-            "EndDate": null,
-            "GearType": gearType,
-            "Hours": hours,
-            "LocationCode": {
-                // "lat": currentLocation.latitude,
-                // "long": currentLocation.longitude
-                "lat": 13.051280, "long": 80.213531
-            },
-            "Status": "Created",
-            "PaymentStatus": "UnPaid",
-            "TripTypeId": TripDetails.id
-        }
         
-        try {   
-            const response = await createBookings(token, data);
+        const data = {
+            Name: name,
+            Address: address,
+            MobileNo: mobileNumber,
+            StartDate: startDate.toString(),
+            EndDate: null,
+            GearType: gearType,
+            Hours: hours,
+            LocationCode: {
+                "lat": currentLocation.latitude,
+                "long": currentLocation.longitude
+            },
+            Status: "Created",
+            PaymentStatus: "UnPaid",
+            TripTypeId: TripDetails.id
+        }
+
+        try {
+            const response = await createBookings(data);
             if (response.data.status === 201) {
                 navigation.navigate('OwnerHome');
                 setName("");
@@ -141,14 +140,13 @@ const BookingScreen = () => {
                 setGearType(null);
             }
         } catch (error: any) {
-            
+
             showError(error?.response?.data?.message);
         }
     }
 
     const renderGearTypeData = ({ item }: any) => {
-        console.log(item);
-        
+
         return (
             <TouchableOpacity
                 style={{ marginHorizontal: 5 }}
@@ -167,14 +165,14 @@ const BookingScreen = () => {
         setAddress(value);
         if (value) clearError("address");
     };
-    
 
-    const handleTripPaymentDetails = async (TripDetails: any, token: any) => {
+
+    const handleTripPaymentDetails = async (TripDetails: any) => {
         setLoader(true);
         try {
-            const res = await PaymentTypeService(TripDetails.id, token)
+            const res = await PaymentTypeService(TripDetails.id)
             const { success, message, data } = res?.data;
-            
+
             if (success === true) {
                 setTripData(data)
             } else {
@@ -188,13 +186,12 @@ const BookingScreen = () => {
         }
     }
 
-    const fetchGearTypes = async (tokens: any) => {
+    const fetchGearTypes = async () => {
         setLoader(true);
         try {
-            const res = await GetGearTypeService(tokens)
-            const { success, message, data } = res?.data;
-            console.log(res);
-            
+            const res = await GetGearTypeService();
+            const { data: { success = false, message = '', data = [] } } = res;
+
             if (success === true) {
                 setTripData(data)
             } else {
@@ -209,32 +206,25 @@ const BookingScreen = () => {
     }
 
     useEffect(() => {
-        handleTripPaymentDetails(TripDetails, token);
-    }, [TripDetails, token])
-    
-    useEffect(() => {
-        const fetchUserData = async () => {
-            try {
-                const storedUserData = await AsyncStorage.getItem("UserData");
-                const tokens = await AsyncStorage.getItem("token");
-                if (storedUserData && tokens) {
-                    setToken(tokens);
-                    fetchGearTypes(tokens)
-                }
-            } catch (error) {
-                console.error("Error fetching user data from AsyncStorage:", error);
-            }
-        };
+        handleTripPaymentDetails(TripDetails);
+    }, [TripDetails])
 
-        fetchUserData();
+    useEffect(() => {
+        fetchGearTypes()
     }, []);
 
     return (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <View className="flex-1 " style={{backgroundColor: COLORS.primary}}>
+            <View className="flex-1 " style={{ backgroundColor: COLORS.primary }}>
                 <View className="flex-1 justify-center items-center">
                     <Header value={value} />
                 </View>
+
+                {loader && (
+                    <View style={{ position: "absolute", height: "100%", width: "100%", zIndex: 10, }}>
+                        <Loader />
+                    </View>
+                )}
 
                 <View className="flex-[9] bg-white rounded-t-[30px] w-full p-1">
                     <ScrollView contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
@@ -255,7 +245,7 @@ const BookingScreen = () => {
                                         placeholder="Enter Name"
                                         placeholderTextColor="gray"
                                         value={name}
-                                        onChangeText={(text) => { 
+                                        onChangeText={(text) => {
                                             setName(text)
                                             if (text) clearError("name");
                                         }}
@@ -293,50 +283,26 @@ const BookingScreen = () => {
 
                                 </View>
 
-                                {/* <View className="mb-[15px] w-full justify-around"> */}
-                                    <View className={`mb-[15px] w-full`}>
-                                        <Text className={`mb-[5px] ${errData.startDate ? "text-red-400" : "text-black"} font-semibold`}>Journey Date</Text>
-                                        <TouchableOpacity onPress={showStartDatePicker} className="w-[99%] h-[40px] border-0.5 border-black justify-center rounded-[5px]">
-                                            <View className="justify-between flex-row">
-                                                <Text className={`${startDate ? "text-[#000]" : "text-gray-500"} left-2`}>
-                                                    {startDate
-                                                        ? startDate.toDateString()
-                                                        : "Select Date"}
-                                                </Text>
-                                                <AntDesign name="calendar" size={16} color={"black"} style={{ right: 10 }} />
-                                            </View>
-                                        </TouchableOpacity>
-                                        <DateTimePicker
-                                            isVisible={isStartDatePickerVisible}
-                                            mode="datetime"
-                                            onConfirm={handleStartDateConfirm}
-                                            onCancel={hideStartDatePicker}
-                                            minimumDate={new Date()}
-                                        />
-                                    </View>
-
-                                    {/* <View className="mb-[15px] w-full">
-                                        <Text className={`mb-[5px] text-black font-semibold`}>End Date</Text>
-                                        <TouchableOpacity onPress={showEndDatePicker} className="w-[99%] h-[40px] border-0.5 border-black justify-center rounded-[5px]">
-                                            <View className="justify-between flex-row">
-                                                <Text className={`${startDate ? "text-[#000]" : "text-gray-500"} left-2`}>
-                                                    {endDate ? endDate.toDateString() : "Select Date"}
-                                                </Text>
-                                                <AntDesign name="calendar" size={16} color={"black"} style={{ right: 10 }} />
-                                            </View>
-                                        </TouchableOpacity>
-                                        <DateTimePicker
-                                            isVisible={isEndDatePickerVisible}
-                                            mode="date"
-                                            onConfirm={handleEndDateConfirm}
-                                            onCancel={hideEndDatePicker}
-                                            minimumDate={startDate} // today
-                                            maximumDate={startDate ? new Date(new Date(startDate).setDate(new Date(startDate).getDate() + 4)) : null}
-                                        />
-
-                                    </View> */}
-
-                                {/* </View> */}
+                                <View className={`mb-[15px] w-full`}>
+                                    <Text className={`mb-[5px] ${errData.startDate ? "text-red-400" : "text-black"} font-semibold`}>Journey Date</Text>
+                                    <TouchableOpacity onPress={showStartDatePicker} className="w-[99%] h-[40px] border-0.5 border-black justify-center rounded-[5px]">
+                                        <View className="justify-between flex-row">
+                                            <Text className={`${startDate ? "text-[#000]" : "text-gray-500"} left-2`}>
+                                                {startDate
+                                                    ? startDate.toDateString()
+                                                    : "Select Date"}
+                                            </Text>
+                                            <AntDesign name="calendar" size={16} color={"black"} style={{ right: 10 }} />
+                                        </View>
+                                    </TouchableOpacity>
+                                    <DateTimePicker
+                                        isVisible={isStartDatePickerVisible}
+                                        mode="datetime"
+                                        onConfirm={handleStartDateConfirm}
+                                        onCancel={hideStartDatePicker}
+                                        minimumDate={new Date()}
+                                    />
+                                </View>
 
                                 <View className="mb-[15px]">
                                     <Text className={`mb-[5px] ${errData.hours ? "text-red-400" : "text-black"} font-semibold`}>
@@ -351,14 +317,18 @@ const BookingScreen = () => {
                                                     setHours(itemValue);
                                                     if (itemValue) clearError("hours");
                                                 }}
+                                                style={{
+                                                    color: hours ? "#000000" : "#9CA3AF",
+                                                }}
                                             >
-                                                <Picker.Item label="Select Hours" value="" />
+                                                <Picker.Item label="Select Hours" value="" color="#9CA3AF"/>
 
                                                 {tripData.map((item: any) => (
                                                     <Picker.Item
                                                         key={item.id}
                                                         label={`${Number(item.hours)} hours`}
                                                         value={Number(item.hours)}
+                                                        color="#000000"
                                                     />
                                                 ))}
                                             </Picker>
@@ -388,7 +358,7 @@ const BookingScreen = () => {
 
                         <View className="flex-1 items-center">
                             <TouchableOpacity onPress={goTOContinue}>
-                                <View style={{backgroundColor: COLORS.primary}} className="p-[15px] rounded-[10px] w-[150px] items-center">
+                                <View style={{ backgroundColor: COLORS.primary }} className="p-[15px] rounded-[10px] w-[150px] items-center">
                                     <Text className="text-white font-semibold">Continue</Text>
                                 </View>
                             </TouchableOpacity>
@@ -401,7 +371,7 @@ const BookingScreen = () => {
                             </TouchableOpacity> */}
                         </View>
 
-                        <ModalBooking isVisible={isVisible} token={token} hours={hours} setIsVisible={setIsVisible} setEstimateAmount={setEstimateAmount} handleBooking={handleBooking} TripDetails={selectedTrip} />
+                        <ModalBooking isVisible={isVisible} hours={hours} setIsVisible={setIsVisible} setEstimateAmount={setEstimateAmount} handleBooking={handleBooking} TripDetails={selectedTrip} />
                     </ScrollView>
                 </View>
 
