@@ -1,6 +1,6 @@
 import { useNavigation, useRoute } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, ToastAndroid, TouchableOpacity } from "react-native";
+import { ActivityIndicator, Alert, ScrollView, ToastAndroid, TouchableOpacity } from "react-native";
 import {
     View,
     Text,
@@ -76,9 +76,13 @@ const SignUp = () => {
 
             try {
                 const response = await signUpVerifyingMail(data)
-                showSuccess(response?.data.message);
-
-                toggleModal()
+                const { data: { message = "", success = false } } = response
+                if (success === true) {
+                    showSuccess(message);
+                    toggleModal()
+                } else {
+                    showError(message);
+                }
             } catch (error: any) {
                 showError(error);
             } finally {
@@ -91,14 +95,16 @@ const SignUp = () => {
         setShowLoader(true)
         const data = {
             email: email,
-            otp: otp
+            otp: otp.toString()
         }
         try {
             const response = await signUpVerifyingOtp(data);
-
-            if (response.data.success === true) {
-                toggleModal();
+            
+            const { data: { message = '', success = false } } = response
+            if (success === true) {
                 handleSignUp();
+            } else {
+                showError("Invalid Otp")
             }
         } catch (error: any) {
             showError(error);
@@ -110,27 +116,29 @@ const SignUp = () => {
     const handleSignUp = async () => {
         setShowLoader(true);
         const data = {
-            "Name": name,
-            "Email": email,
-            "MobileNo": mobileNo,
-            "Password": password,
-            "Field": "Car Owner",
-            'otp': otp,
-            'referralCode': referalcode === "" ? null : referalcode
+            Name: name,
+            Email: email,
+            MobileNo: mobileNo,
+            Password: password,
+            Field: "Car Owner",
+            otp: otp.toString(),
+            referralCode: referalcode === "" ? null : referalcode
         }
 
         try {
             const response = await fetchSignUp(data)
-
-            if (response.status === 200) {
-
-                showSuccess(response?.data.message);
+            const { data: { message = '', status = 0 } } = response
+            if (status === 200) {
+                showSuccess(message);
                 setName("");
                 setEmail("");
                 setMobileNo("");
                 setPassword("");
                 setConfirmPassword("");
+                toggleModal();
                 navigation.navigate("Login");
+            } else {
+                showError(message)
             }
         } catch (error) {
             console.error(error);
@@ -140,7 +148,7 @@ const SignUp = () => {
     };
 
     const closeReferral = () => {
-        if(referalcode !== ""){
+        if (referalcode !== "") {
             setReferalShow(false)
         } else {
             showError("Enter Your Referral Code")
@@ -171,190 +179,201 @@ const SignUp = () => {
                 </View>
             )}
 
-            <View className="flex-1 justify-center items-center">
-                <View style={{ elevation: 3 }} className="w-[97%] justify-center items-center shadow-black bg-white rounded-[20px] p-[5%]">
-                    <View className="w-[100%]">
-                        <Image
-                            source={appLogo}
-                            className="w-24 h-24 rounded-full border-[1px] border-black"
-                            resizeMode="cover"
-                        />
-                    </View>
-
-                    <Text className="text-black mt-4 text-[20px] font-bold mb-5">Create Account</Text>
-
-                    <View className="w-[99%] mt-2 h-[10%]" style={{ marginVertical: 1 }}>
-                        <View className="flex-row w-full justify-center items-center border-[0.5px] rounded-[10px]">
-                            <FontAwesome name="user" color={"black"} size={20} style={{ alignSelf: 'center' }} />
-                            <TextInput
-                                style={{ color: "black", paddingHorizontal: 10, height: 40, width: '90%' }}
-                                placeholder="Enter name"
-                                placeholderTextColor="gray"
-                                onChangeText={(txt) => {
-                                    setName(txt);
-                                    setErrName(!txt);
-                                }}
+            <ScrollView
+                className="flex-1 w-full"
+                contentContainerStyle={{
+                    flexGrow: 1,
+                    alignItems: "center",
+                    paddingVertical: 20,
+                }}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+            >
+                <View className="w-full justify-center items-center">
+                    <View style={{ elevation: 3 }} className="w-[97%] justify-center items-center shadow-black bg-white rounded-[20px] p-[5%]">
+                        <View className="w-[100%] justify-center items-center">
+                            <Image
+                                source={appLogo}
+                                className="w-24 h-24 rounded-full border-[1px] border-black"
+                                resizeMode="cover"
                             />
                         </View>
-                        {errName && <Text className="text-red-500 font-semibold">Name is required</Text>}
-                    </View>
 
-                    <View className="w-[99%] mt-2 h-[10%]" style={{ marginVertical: 1 }}>
-                        <View className="flex-row w-full justify-center items-center border-[0.5px] rounded-[10px]">
-                            <MaterialIcons name="email" color={"black"} size={20} style={{ alignSelf: 'center' }} />
-                            <TextInput
-                                style={{ color: "black", paddingHorizontal: 10, height: 40, width: '90%' }}
-                                placeholder="Enter email id"
-                                placeholderTextColor="gray"
-                                onChangeText={(txt) => {
-                                    setEmail(txt);
-                                    setErrEmail(!txt);
-                                }}
-                            />
-                        </View>
-                        {errEmail && <Text className="text-red-500 font-semibold">{email.length === 0 ? 'Email is required' : 'Invalid email address'}</Text>}
-                    </View>
+                        <Text className="text-black mt-4 text-[20px] font-bold mb-5">Create Account</Text>
 
-                    <View className="w-[99%] mt-2 h-[10%]" style={{ marginVertical: 1 }}>
-                        <View className="flex-row w-full justify-center items-center border-[0.5px] rounded-[10px]">
-                            <MaterialIcons name="phone" color={"black"} size={20} style={{ alignSelf: 'center' }} />
-                            <TextInput
-                                style={{ color: "black", paddingHorizontal: 10, height: 40, width: '90%' }}
-                                placeholder="Enter mobile number"
-                                placeholderTextColor="gray"
-                                keyboardType='number-pad'
-                                value={mobileNo}
-                                onChangeText={(text) => {
-                                    const cleaned = text.replace(/[^0-9]/g, '');
-                                    setMobileNo(cleaned);
-                                    // setMobileNo(text);
-                                    setErrMobileNo(!text);
-                                }}
-                            />
-                        </View>
-                        {errMobileNo && <Text className="text-red-500 font-semibold">Mobile number is required</Text>}
-                    </View>
-
-                    <View className="w-[99%] mt-2 h-[10%]" style={{ marginVertical: 1 }}>
-                        <View className="flex-row w-full justify-center items-center border-[0.5px] rounded-[10px]">
-                            <View className="items-center w-[10%] justify-center h-full">
-                                <FontAwesome name="lock" size={20} color={"black"} />
+                        <View className="w-[99%] mt-2 h-[10%]" style={{ marginVertical: 1 }}>
+                            <View className="flex-row w-full justify-center items-center border-[0.5px] rounded-[10px]">
+                                <FontAwesome name="user" color={"black"} size={20} style={{ alignSelf: 'center' }} />
+                                <TextInput
+                                    style={{ color: "black", paddingHorizontal: 10, height: 40, width: '90%' }}
+                                    placeholder="Enter name"
+                                    placeholderTextColor="gray"
+                                    onChangeText={(txt) => {
+                                        setName(txt);
+                                        setErrName(!txt);
+                                    }}
+                                />
                             </View>
-                            <TextInput
-                                style={{ color: "black", paddingHorizontal: 10, height: 40, width: '80%' }}
-                                placeholder="Enter password"
-                                placeholderTextColor="gray"
-                                secureTextEntry={!passwordVisible}
-                                onChangeText={(txt) => {
-                                    setPassword(txt);
-                                    setErrPassword(!txt);
-                                }}
-                            />
-                            <TouchableOpacity onPress={() => setPasswordVisible(!passwordVisible)} className="w-[10%]">
-                                <FontAwesome name={!passwordVisible ? "eye" : "eye-slash"} size={20} color="black" />
-                            </TouchableOpacity>
+                            {errName && <Text className="text-red-500 font-semibold">Name is required</Text>}
                         </View>
-                        {errPassword && <Text className="text-red-500 font-semibold">Password is required</Text>}
-                    </View>
 
-                    <View className="w-[99%] mt-2 h-[10%]" style={{ marginVertical: 1 }}>
-                        <View className="flex-row w-full justify-center items-center border-[0.5px] rounded-[10px]">
-                            <View className="items-center w-[10%] justify-center h-full">
-                                <FontAwesome name="lock" size={20} color={"black"} />
+                        <View className="w-[99%] mt-2 h-[10%]" style={{ marginVertical: 1 }}>
+                            <View className="flex-row w-full justify-center items-center border-[0.5px] rounded-[10px]">
+                                <MaterialIcons name="email" color={"black"} size={20} style={{ alignSelf: 'center' }} />
+                                <TextInput
+                                    style={{ color: "black", paddingHorizontal: 10, height: 40, width: '90%' }}
+                                    placeholder="Enter email id"
+                                    placeholderTextColor="gray"
+                                    onChangeText={(txt) => {
+                                        setEmail(txt);
+                                        setErrEmail(!txt);
+                                    }}
+                                />
                             </View>
-                            <TextInput
-                                style={{ color: "black", paddingHorizontal: 10, height: 40, width: '80%' }}
-                                placeholder="Confirm password"
-                                placeholderTextColor="gray"
-                                secureTextEntry={!confirmPasswordVisible}
-                                onChangeText={(txt) => {
-                                    setConfirmPassword(txt);
-                                    setErrConfirmPassword(!txt);
-                                }}
-                            />
-                            <TouchableOpacity onPress={() => setConfirmPasswordVisible(!confirmPasswordVisible)} className="w-[10%]">
-                                <FontAwesome name={!confirmPasswordVisible ? "eye" : "eye-slash"} size={20} color="black" />
-                            </TouchableOpacity>
+                            {errEmail && <Text className="text-red-500 font-semibold">{email.length === 0 ? 'Email is required' : 'Invalid email address'}</Text>}
                         </View>
-                        {errConfirmPassword && <Text className="text-red-500 font-semibold">Confirm Password is required</Text>}
-                    </View>
 
-                    <View className="mt-[20px] w-full justify-center items-center">
-                        {
-                            showLoader ? (
-                                <View style={{ backgroundColor: COLORS.primary }} className="w-[150px] h-[40px] justify-center items-center rounded-[10px]">
-                                    <ActivityIndicator color={"white"} size={"small"} />
+                        <View className="w-[99%] mt-2 h-[10%]" style={{ marginVertical: 1 }}>
+                            <View className="flex-row w-full justify-center items-center border-[0.5px] rounded-[10px]">
+                                <MaterialIcons name="phone" color={"black"} size={20} style={{ alignSelf: 'center' }} />
+                                <TextInput
+                                    style={{ color: "black", paddingHorizontal: 10, height: 40, width: '90%' }}
+                                    placeholder="Enter mobile number"
+                                    placeholderTextColor="gray"
+                                    keyboardType='number-pad'
+                                    value={mobileNo}
+                                    onChangeText={(text) => {
+                                        const cleaned = text.replace(/[^0-9]/g, '');
+                                        setMobileNo(cleaned);
+                                        // setMobileNo(text);
+                                        setErrMobileNo(!text);
+                                    }}
+                                />
+                            </View>
+                            {errMobileNo && <Text className="text-red-500 font-semibold">Mobile number is required</Text>}
+                        </View>
+
+                        <View className="w-[99%] mt-2 h-[10%]" style={{ marginVertical: 1 }}>
+                            <View className="flex-row w-full justify-center items-center border-[0.5px] rounded-[10px]">
+                                <View className="items-center w-[10%] justify-center h-full">
+                                    <FontAwesome name="lock" size={20} color={"black"} />
                                 </View>
-                            ) : (
-                                <TouchableOpacity onPress={checkCondition} style={{ backgroundColor: COLORS.primary }} className="w-[150px] h-[40px] justify-center items-center rounded-[10px]">
-                                    <Text className="text-white font-semibold text-[18px]">Continue</Text>
+                                <TextInput
+                                    style={{ color: "black", paddingHorizontal: 10, height: 40, width: '80%' }}
+                                    placeholder="Enter password"
+                                    placeholderTextColor="gray"
+                                    secureTextEntry={!passwordVisible}
+                                    onChangeText={(txt) => {
+                                        setPassword(txt);
+                                        setErrPassword(!txt);
+                                    }}
+                                />
+                                <TouchableOpacity onPress={() => setPasswordVisible(!passwordVisible)} className="w-[10%]">
+                                    <FontAwesome name={!passwordVisible ? "eye" : "eye-slash"} size={20} color="black" />
                                 </TouchableOpacity>
-                            )
-                        }
-
-                        <View className="flex-row mt-5">
-                            <Text className="text-black text-[14px] font-semibold">Already have an account?</Text>
-                            <TouchableOpacity className="ml-1" onPress={() => navigation.navigate("Login")}>
-                                <Text className="text-[14px] font-semibold" style={{ color: COLORS.primary }}>Login</Text>
-                            </TouchableOpacity>
+                            </View>
+                            {errPassword && <Text className="text-red-500 font-semibold">Password is required</Text>}
                         </View>
+
+                        <View className="w-[99%] mt-2 h-[10%]" style={{ marginVertical: 1 }}>
+                            <View className="flex-row w-full justify-center items-center border-[0.5px] rounded-[10px]">
+                                <View className="items-center w-[10%] justify-center h-full">
+                                    <FontAwesome name="lock" size={20} color={"black"} />
+                                </View>
+                                <TextInput
+                                    style={{ color: "black", paddingHorizontal: 10, height: 40, width: '80%' }}
+                                    placeholder="Confirm password"
+                                    placeholderTextColor="gray"
+                                    secureTextEntry={!confirmPasswordVisible}
+                                    onChangeText={(txt) => {
+                                        setConfirmPassword(txt);
+                                        setErrConfirmPassword(!txt);
+                                    }}
+                                />
+                                <TouchableOpacity onPress={() => setConfirmPasswordVisible(!confirmPasswordVisible)} className="w-[10%]">
+                                    <FontAwesome name={!confirmPasswordVisible ? "eye" : "eye-slash"} size={20} color="black" />
+                                </TouchableOpacity>
+                            </View>
+                            {errConfirmPassword && <Text className="text-red-500 font-semibold">Confirm Password is required</Text>}
+                        </View>
+
+                        <View className="mt-[20px] w-full justify-center items-center">
+                            {
+                                showLoader ? (
+                                    <View style={{ backgroundColor: COLORS.primary }} className="w-[150px] h-[40px] justify-center items-center rounded-[10px]">
+                                        <ActivityIndicator color={"white"} size={"small"} />
+                                    </View>
+                                ) : (
+                                    <TouchableOpacity onPress={checkCondition} style={{ backgroundColor: COLORS.primary }} className="w-[150px] h-[40px] justify-center items-center rounded-[10px]">
+                                        <Text className="text-white font-semibold text-[18px]">Continue</Text>
+                                    </TouchableOpacity>
+                                )
+                            }
+
+                            <View className="flex-row mt-5">
+                                <Text className="text-black text-[14px] font-semibold">Already have an account?</Text>
+                                <TouchableOpacity className="ml-1" onPress={() => navigation.navigate("Login")}>
+                                    <Text className="text-[14px] font-semibold" style={{ color: COLORS.primary }}>Login</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+
                     </View>
+                    {referalShow === true &&
+                        <View className="absolute h-full w-full justify-center items-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+                            <View className="w-[90%] bg-white shadow-black p-6 rounded-2xl items-center" style={{ elevation: 5 }}>
+                                <Text className="text-black text-[16px] font-bold">Enter Referral Code</Text>
+
+                                <TextInput
+                                    style={{ color: "black", paddingHorizontal: 10, height: 40, width: '90%' }}
+                                    className="border-black border-[0.5px] rounded-lg mt-5"
+                                    placeholder="Enter Referral Code"
+                                    placeholderTextColor="gray"
+                                    onChangeText={(txt) => {
+                                        setReferalCode(txt)
+                                    }}
+                                />
+
+                                <View className="w-full mt-5 justify-center items-center">
+                                    <TouchableOpacity
+                                        onPress={closeReferral}
+                                        className="w-[60%] justify-center items-center p-2 rounded-xl" style={{ backgroundColor: COLORS.primary }}>
+                                        <Text className="text-white text-[14px] font-bold">Done</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        </View>
+                    }
+                    <Modal
+                        visible={openModal}
+                        transparent
+                        animationType="fade"
+                        onRequestClose={toggleModal}
+                    >
+                        <View className="flex-1 justify-center items-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+                            <View className="w-[90%] bg-white shadow-black p-6 rounded-2xl items-center" style={{ elevation: 5 }}>
+                                <Text className="text-lg font-bold text-black mb-3">OTP Verify</Text>
+                                <Text className="text-center text-black mb-5">Check your email id :  <Text className="text-blue-700">{email}</Text></Text>
+                                <View className="mt-5">
+                                    <Text className="text-black text-[12px] font-bold">Enter Your OTP</Text>
+                                    <View>
+                                        <OneTimeCodeTextComponent
+                                            value={otp}
+                                            onChangeText={(value: string) => setOtp(value)}
+                                        />
+                                    </View>
+                                </View>
+                                <View className="mt-5">
+                                    <TouchableOpacity onPress={checkOtp} style={{ backgroundColor: COLORS.primary }} className="w-[150px] h-[40px] justify-center items-center rounded-[10px]">
+                                        <Text className="text-white text-[18px] font-bold">Done</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        </View>
+                    </Modal>
 
                 </View>
-                {referalShow === true &&
-                    <View className="absolute h-full w-full justify-center items-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-                        <View className="w-[90%] bg-white shadow-black p-6 rounded-2xl items-center" style={{ elevation: 5 }}>
-                            <Text className="text-black text-[16px] font-bold">Enter Referral Code</Text>
-
-                            <TextInput
-                                style={{ color: "black", paddingHorizontal: 10, height: 40, width: '90%' }}
-                                className="border-black border-[0.5px] rounded-lg mt-5"
-                                placeholder="Enter Referral Code"
-                                placeholderTextColor="gray"
-                                onChangeText={(txt) => {
-                                    setReferalCode(txt)
-                                }}
-                            />
-
-                            <View className="w-full mt-5 justify-center items-center">
-                                <TouchableOpacity 
-                                    onPress={closeReferral}  
-                                    className="w-[60%] justify-center items-center p-2 rounded-xl" style={{backgroundColor:COLORS.primary}}>
-                                    <Text className="text-white text-[14px] font-bold">Done</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                    </View>
-                }
-                <Modal
-                    visible={openModal}
-                    transparent
-                    animationType="fade"
-                    onRequestClose={toggleModal}
-                >
-                    <View className="flex-1 justify-center items-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-                        <View className="w-[90%] bg-white shadow-black p-6 rounded-2xl items-center" style={{ elevation: 5 }}>
-                            <Text className="text-lg font-bold text-black mb-3">OTP Verify</Text>
-                            <Text className="text-center text-black mb-5">Check your email id :  <Text className="text-blue-700">{email}</Text></Text>
-                            <View className="mt-5">
-                                <Text className="text-black text-[12px] font-bold">Enter Your OTP</Text>
-                                <View>
-                                    <OneTimeCodeTextComponent
-                                        value={otp}
-                                        onChangeText={(value: string) => setOtp(value)}
-                                    />
-                                </View>
-                            </View>
-                            <View className="mt-5">
-                                <TouchableOpacity onPress={checkOtp} className="w-[150px] h-[40px] bg-[#9400FF] justify-center items-center rounded-[10px]">
-                                    <Text className="text-white text-[18px] font-bold">Done</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                    </View>
-                </Modal>
-
-            </View>
+            </ScrollView>
         </SafeAreaView>
     );
 };

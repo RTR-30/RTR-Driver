@@ -22,6 +22,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { COLORS } from "../../../../utils/ColorCode";
 import { showError } from "../../../../Common/ToastMessage";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import Loader from "../../../../Common/Loader";
 
 const Thinking = require("../../../../../assets/Image/Thinking.png")
 
@@ -71,12 +72,12 @@ const TripScreen = () => {
                 <Header value={value} />
             </View>
 
+            {loader ? (
+                <View className="absolute justify-center items-center h-full w-full">
+                    <Loader />
+                </View>
+            ) : null}
             <View className="flex-[9] bg-white rounded-t-[30px] w-full p-2">
-                {loader ? (
-                    <View className="absolute justify-center items-center h-full w-full">
-                        <ActivityIndicator color={"red"} size={"large"} />
-                    </View>
-                ) : null}
                 <FlatList
                     data={triptypes}
                     keyExtractor={(item: any) => item.id.toString()}
@@ -84,6 +85,7 @@ const TripScreen = () => {
                     showsVerticalScrollIndicator={false}
                     columnWrapperStyle={{
                         justifyContent: "space-between",
+                        padding: 10
                         // marginBottom: 15,
                     }}
                     numColumns={2}
@@ -92,10 +94,10 @@ const TripScreen = () => {
                             <TouchableOpacity
                                 onPress={() => navigation.navigate("Booking", { TripDetails: item })}
                                 style={{ elevation: 3 }}
-                                className="bg-white w-[100%] p-2 border-black border-[0.5px] justify-center items-center shadow-md shadow-black rounded-tl-3xl rounded-br-3xl"
+                                className="bg-white w-[100%] p-2 border-black border-[0.5px] justify-center items-center shadow-md shadow-black rounded-tl-2xl rounded-br-2xl"
                             >
                                 <Ionicons name="car-sport" size={30} color={"black"} />
-                                <Text className="text-lg font-semibold text-center" style={{color: COLORS.primary}}>{item.trip_type}</Text>
+                                <Text className="text-lg font-semibold text-center" style={{ color: COLORS.primary }}>{item.trip_type}</Text>
                             </TouchableOpacity>
                         </View>
                     )}

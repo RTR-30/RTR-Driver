@@ -1,4 +1,3 @@
-import axios from "axios";
 import { bookingBaseUrl, bookingList, FeedbackApis, FeedBackBaseUrl } from "../../../../../environment/ApiManager";
 import { Get } from "../../../../Common/HttpService";
 

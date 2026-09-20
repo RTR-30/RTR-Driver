@@ -3,6 +3,8 @@ import { bookingBaseUrl, bookingsApis, createBooking, ownBaseUrl, payment, payme
 import { Get, Post } from "../../../../Common/HttpService";
 
 export const createBookings = ( data:any ) => {
+    console.log(`${bookingBaseUrl}${createBooking}`);
+    
     return Post(`${bookingBaseUrl}${createBooking}`, data, "rtrToken")
 }
 
@@ -19,5 +21,5 @@ export const PaymentTypeService = async (id: any) => {
 }
 
 export const GetGearTypeService = async () => {
-    return Get(`${ownBaseUrl}${bookingsApis.gearType}`, 'rtrToken')
+    return Get(`${bookingBaseUrl}${bookingsApis.gearType}`, 'rtrToken')
 }

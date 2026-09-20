@@ -119,6 +119,9 @@ const GoogleMaps = ({
             if (data?.display_name) {
                 setAddress(data.display_name);
             }
+            else{
+                setAddress("murari")
+            }
         } catch {
             setAddress("Unable to fetch address");
         }
@@ -129,27 +132,41 @@ const GoogleMaps = ({
     const fetchCurrentLocation = async () => {
         const hasPermission = await requestLocationPermission();
         if (!hasPermission) return;
-
+        
         Geolocation.getCurrentPosition(
             position => {
                 const { latitude, longitude } = position.coords;
-                const location = { latitude, longitude };
-
+        
+                const location = {
+                    latitude,
+                    longitude,
+                };
+        
                 setCurrentLocation(location);
                 handleCurrentLocation(location);
+        
                 getAddress(latitude, longitude);
-
+        
                 mapRef.current?.animateToRegion({
                     ...location,
                     latitudeDelta: 0.015,
                     longitudeDelta: 0.0121,
                 });
             },
-            error => Alert.alert("Location Error", error.message),
+            error => {
+                console.log("GEOLOCATION ERROR:", error);
+        
+                Alert.alert(
+                    "Location Error",
+                    `${error.message}\n\nError Code: ${error.code}`
+                );
+            },
             {
                 enableHighAccuracy: true,
-                timeout: 20000,
+                timeout: 30000,
                 maximumAge: 10000,
+                forceRequestLocation: true,
+                showLocationDialog: true,
             }
         );
     };
@@ -186,7 +203,7 @@ const GoogleMaps = ({
                 ref={mapRef}
                 style={{ height }}
                 initialRegion={defaultRegion}
-                customMapStyle={darkMapStyle}
+                // customMapStyle={darkMapStyle}
                 showsBuildings
                 zoomEnabled
                 onPress={handleMapPress}

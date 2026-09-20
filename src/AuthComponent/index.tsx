@@ -33,7 +33,7 @@ import Statistics from "../Component/PrivateComponent/CarOwner/Statistics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { removeOneSignalservice } from "./helper";
 import { COLORS } from "../utils/ColorCode";
-import { showError } from "../Common/ToastMessage";
+import { showError, showSuccess } from "../Common/ToastMessage";
 
 
 const Stack = createNativeStackNavigator();
@@ -52,10 +52,16 @@ const CustomDrawerContent = (props: any) => {
         
         try {
             const res = await removeOneSignalservice(token, data)
-            
-            await AsyncStorage.removeItem("userData");
-            await AsyncStorage.clear();
-            navigation.navigate("Login");
+            console.log(res?.data);
+            const { data: { message = '', success = false } } = res
+            if(success === true){
+                await AsyncStorage.removeItem("userData");
+                await AsyncStorage.clear();
+                navigation.navigate("Login");
+                showSuccess("logout success")
+            } else {
+                showError(message)
+            }
         } catch (error) {
             showError(error);
 

@@ -13,7 +13,7 @@ export const Get = async (url: string, attachToken = "NoToken"): Promise<any> =>
     if (convertToLowerCase(attachToken) === convertToLowerCase("rtrToken")) {
         headers = { ...(await rtrToken()), };
     }
-    
+
     try {
         const res: any = await axios.get(url, {
             headers: headers,
@@ -54,18 +54,25 @@ export const Put = async (url: string, params: any = {}, attachToken: string = "
     }
 }
 
-export const Delete = async (url: string, attachToken: string = ""): Promise<any> => {
+export const Delete = async ( url: string, data: any = {}, attachToken: string = ""): Promise<any> => {
     let headers = {};
+
     if (convertToLowerCase(attachToken) === convertToLowerCase("rtrToken")) {
         headers = { ...(await rtrToken()) };
     }
+
     try {
-        const res: any = await axios.delete(url, { headers: headers });
+        const res: any = await axios.delete(url, {
+            headers: headers,
+            data: data,
+        });
+
         return res;
     } catch (error: any) {
-        showError(error)
+        showError(error);
+        throw error;
     }
-}
+};
 
 export const Patch = async (url: string, params: any = {}, attachToken = "NoToken"): Promise<any> => {
     let headers = {};
@@ -107,7 +114,7 @@ export const withoutTokenPost = async (
 };
 
 
-export const withoutTokenPut = async ( url: string, params: any = {}): Promise<any> => {
+export const withoutTokenPut = async (url: string, params: any = {}): Promise<any> => {
     try {
         const res: any = await axios.put(url, params, {
             headers: Noheaders,

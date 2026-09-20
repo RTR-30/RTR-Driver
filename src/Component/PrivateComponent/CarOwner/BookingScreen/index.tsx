@@ -9,7 +9,8 @@ import {
     TouchableWithoutFeedback,
     ScrollView,
     FlatList,
-    ToastAndroid
+    ToastAndroid,
+    Modal
 } from "react-native";
 import Header from "../../../../Common/Header/index";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -38,11 +39,6 @@ const BookingScreen = () => {
         longitude: 0,
     });
     const [gearTypeData, setGearTypeData] = useState<any[]>([]);
-    // const gearTypeData = [
-    //     { label: 'All', value: 'All' },
-    //     { label: 'Automatic', value: 'Automatic' },
-    //     { label: 'Manual', value: 'Manual' }
-    // ];
 
     const [errData, setErrData] = useState({
         name: false,
@@ -57,7 +53,7 @@ const BookingScreen = () => {
     const [address, setAddress] = useState("");
     const [mobileNumber, setMobileNumber] = useState("");
     const [startDate, setStartDate] = useState<any>(null);
-    const [hours, setHours] = useState(null);
+    const [hours, setHours] = useState<any>(null);
     const [gearType, setGearType] = useState(null);
 
     const [estimateAmount, setEstimateAmount] = useState<any>(null);
@@ -66,6 +62,7 @@ const BookingScreen = () => {
 
     const [isStartDatePickerVisible, setStartDatePickerVisibility] = useState(false);
     const [isEndDatePickerVisible, setEndDatePickerVisibility] = useState(false);
+    const [isHoursDropdownVisible, setIsHoursDropdownVisible] = useState(false);
 
     const showStartDatePicker = () => setStartDatePickerVisibility(true);
     const hideStartDatePicker = () => setStartDatePickerVisibility(false);
@@ -76,8 +73,8 @@ const BookingScreen = () => {
         hideStartDatePicker();
     };
 
-    const handleCurrentLocation = (latitude: any, longitude: any) => {
-        setCurrentLocation({ latitude: latitude, longitude: longitude });
+    const handleCurrentLocation = (coordinate: any) => {
+        setCurrentLocation({ latitude: coordinate?.latitude, longitude: coordinate?.longitude });
     };
 
     const clearError = (key: keyof typeof errData) => {
@@ -85,11 +82,10 @@ const BookingScreen = () => {
     };
 
     const goTOContinue = () => {
-
         const errors = {
             name: !name,
             address: !address,
-            mobileNumber: !mobileNumber,
+            mobileNumber: !mobileNumber || !/^[0-9]{10}$/.test(mobileNumber),
             startDate: !startDate,
             gearType: !gearType,
             hours: !hours,
@@ -100,18 +96,26 @@ const BookingScreen = () => {
         const hasError = Object.values(errors).some(Boolean);
 
         if (hasError) {
-            showError("Require all fields");
-        } else {
-            const selectedTrips = tripData.find(
-                (item: any) => Number(item.hours) === Number(hours)
-            );
-            setSelectedTrip(selectedTrips)
-            setIsVisible(true);
+            if (!mobileNumber) {
+                showError("Mobile number is required");
+            } else if (!/^[0-9]{10}$/.test(mobileNumber)) {
+                showError("Mobile number must be exactly 10 digits");
+            } else {
+                showError("Require all fields");
+            }
+            return;
         }
+
+        const selectedTrips = tripData.find(
+            (item: any) => Number(item.hours) === Number(hours)
+        );
+
+        setSelectedTrip(selectedTrips);
+        setIsVisible(true);
     };
 
     const handleBooking = async () => {
-        
+
         const data = {
             Name: name,
             Address: address,
@@ -128,10 +132,13 @@ const BookingScreen = () => {
             PaymentStatus: "UnPaid",
             TripTypeId: TripDetails.id
         }
+        console.log(data);
 
         try {
             const response = await createBookings(data);
+
             if (response.data.status === 201) {
+                setIsVisible(false);
                 navigation.navigate('OwnerHome');
                 setName("");
                 setAddress("");
@@ -150,13 +157,13 @@ const BookingScreen = () => {
         return (
             <TouchableOpacity
                 style={{ marginHorizontal: 5 }}
-                className={`p-[10px] border rounded-[5px] ${gearType === item.name ? "border-blue-600" : "border-[#ccc]"}`}
+                className={`p-[10px] border rounded-[5px] ${gearType === item ? "border-blue-600" : "border-[#ccc]"}`}
                 onPress={() => {
-                    setGearType(item.name)
+                    setGearType(item)
                     clearError("gearType");
                 }}
             >
-                <Text className={`${gearType === item.name ? "text-blue-600" : "text-black"}`}>{item.name}</Text>
+                <Text className={`${gearType === item ? "text-blue-600" : "text-black"}`}>{item}</Text>
             </TouchableOpacity>
         )
     }
@@ -193,7 +200,7 @@ const BookingScreen = () => {
             const { data: { success = false, message = '', data = [] } } = res;
 
             if (success === true) {
-                setTripData(data)
+                setGearTypeData(data)
             } else {
                 showError(message);
             }
@@ -305,35 +312,160 @@ const BookingScreen = () => {
                                 </View>
 
                                 <View className="mb-[15px]">
-                                    <Text className={`mb-[5px] ${errData.hours ? "text-red-400" : "text-black"} font-semibold`}>
+                                    <Text
+                                        className={`mb-[5px] ${errData.hours ? "text-red-400" : "text-black"
+                                            } font-semibold`}
+                                    >
                                         Select Hours
                                     </Text>
 
-                                    {tripData !== null &&
-                                        <View className="w-[99%] h-[40px] border-0.5 border-black justify-center rounded-[5px]">
-                                            <Picker
-                                                selectedValue={hours}
-                                                onValueChange={(itemValue) => {
-                                                    setHours(itemValue);
-                                                    if (itemValue) clearError("hours");
-                                                }}
-                                                style={{
-                                                    color: hours ? "#000000" : "#9CA3AF",
-                                                }}
+                                    {tripData !== null && (
+                                        <>
+                                            {/* Dropdown Button */}
+                                            <TouchableOpacity
+                                                activeOpacity={0.7}
+                                                onPress={() => setIsHoursDropdownVisible(true)}
+                                                className="w-[99%] h-[40px] border border-black justify-center rounded-[5px]"
                                             >
-                                                <Picker.Item label="Select Hours" value="" color="#9CA3AF"/>
+                                                <View className="flex-row items-center justify-between px-3">
+                                                    <Text
+                                                        className={
+                                                            hours
+                                                                ? "text-black"
+                                                                : "text-gray-500"
+                                                        }
+                                                    >
+                                                        {hours
+                                                            ? `${Number(hours)} hours`
+                                                            : "Select Hours"}
+                                                    </Text>
 
-                                                {tripData.map((item: any) => (
-                                                    <Picker.Item
-                                                        key={item.id}
-                                                        label={`${Number(item.hours)} hours`}
-                                                        value={Number(item.hours)}
-                                                        color="#000000"
+                                                    <AntDesign
+                                                        name={
+                                                            isHoursDropdownVisible
+                                                                ? "up"
+                                                                : "down"
+                                                        }
+                                                        size={14}
+                                                        color="black"
                                                     />
-                                                ))}
-                                            </Picker>
-                                        </View>
-                                    }
+                                                </View>
+                                            </TouchableOpacity>
+
+                                            {/* Dropdown Modal */}
+                                            <Modal
+                                                visible={isHoursDropdownVisible}
+                                                transparent
+                                                animationType="fade"
+                                                onRequestClose={() =>
+                                                    setIsHoursDropdownVisible(false)
+                                                }
+                                            >
+                                                <TouchableWithoutFeedback
+                                                    onPress={() =>
+                                                        setIsHoursDropdownVisible(false)
+                                                    }
+                                                >
+                                                    <View
+                                                        className="flex-1 justify-center items-center"
+                                                        style={{
+                                                            backgroundColor: "rgba(0,0,0,0.3)",
+                                                        }}
+                                                    >
+                                                        <TouchableWithoutFeedback>
+                                                            <View
+                                                                className="bg-white rounded-[10px] w-[85%]"
+                                                                style={{
+                                                                    maxHeight: 300,
+                                                                    elevation: 5,
+                                                                    shadowColor: "#000",
+                                                                    shadowOffset: {
+                                                                        width: 0,
+                                                                        height: 2,
+                                                                    },
+                                                                    shadowOpacity: 0.25,
+                                                                    shadowRadius: 4,
+                                                                }}
+                                                            >
+                                                                {/* Dropdown Header */}
+                                                                <View className="p-4 border-b border-[#eee]">
+                                                                    <Text className="text-black font-semibold text-[16px]">
+                                                                        Select Hours
+                                                                    </Text>
+                                                                </View>
+
+                                                                {/* Options */}
+                                                                <FlatList
+                                                                    data={tripData}
+                                                                    keyExtractor={(item: any) =>
+                                                                        item.id.toString()
+                                                                    }
+                                                                    renderItem={({ item }: any) => {
+                                                                        const selected =
+                                                                            Number(hours) ===
+                                                                            Number(item.hours);
+
+                                                                        return (
+                                                                            <TouchableOpacity
+                                                                                activeOpacity={0.7}
+                                                                                onPress={() => {
+                                                                                    setHours(
+                                                                                        Number(item.hours)
+                                                                                    );
+                                                                                    clearError("hours");
+                                                                                    setIsHoursDropdownVisible(
+                                                                                        false
+                                                                                    );
+                                                                                }}
+                                                                                className={`px-4 py-3 border-b border-[#eee] ${selected
+                                                                                        ? "bg-gray-100"
+                                                                                        : "bg-white"
+                                                                                    }`}
+                                                                            >
+                                                                                <View className="flex-row items-center justify-between">
+                                                                                    <Text
+                                                                                        className={`text-[15px] ${selected
+                                                                                                ? "text-blue-600 font-semibold"
+                                                                                                : "text-black"
+                                                                                            }`}
+                                                                                    >
+                                                                                        {Number(
+                                                                                            item.hours
+                                                                                        )}{" "}
+                                                                                        hours
+                                                                                    </Text>
+
+                                                                                    {selected && (
+                                                                                        <AntDesign
+                                                                                            name="check"
+                                                                                            size={16}
+                                                                                            color="blue"
+                                                                                        />
+                                                                                    )}
+                                                                                </View>
+                                                                            </TouchableOpacity>
+                                                                        );
+                                                                    }}
+                                                                />
+
+                                                                {/* Cancel */}
+                                                                <TouchableOpacity
+                                                                    onPress={() =>
+                                                                        setIsHoursDropdownVisible(false)
+                                                                    }
+                                                                    className="p-4 items-center"
+                                                                >
+                                                                    <Text className="text-red-500 font-semibold">
+                                                                        Cancel
+                                                                    </Text>
+                                                                </TouchableOpacity>
+                                                            </View>
+                                                        </TouchableWithoutFeedback>
+                                                    </View>
+                                                </TouchableWithoutFeedback>
+                                            </Modal>
+                                        </>
+                                    )}
                                 </View>
 
 

@@ -67,7 +67,7 @@ const ModalBooking = ({ hours, setIsVisible, isVisible, setEstimateAmount, handl
                         </View>
 
                         <View className="w-[50%]">
-                            <Text className="text-[18px] font-bold">₹{TripDetails?.total_amount}</Text>
+                            <Text className="text-[18px] font-bold">: ₹{TripDetails?.total_amount}</Text>
                         </View>
                     </View>
 
@@ -80,10 +80,10 @@ const ModalBooking = ({ hours, setIsVisible, isVisible, setEstimateAmount, handl
                         </View>
 
                         <View className="w-[50%]">
-                            <Text className="text-[18px] font-normal">₹{TripDetails?.driver_charge}</Text>
-                            <Text className="text-[18px] font-normal">₹{GST}</Text>
-                            <Text className="text-[18px] font-normal">₹{PlatformFee}</Text>
-                            <Text className="text-[18px] font-normal text-red-400">₹{totalDiscount}</Text>
+                            <Text className="text-[18px] font-normal">: ₹{TripDetails?.driver_charge}</Text>
+                            <Text className="text-[18px] font-normal">: ₹{GST}</Text>
+                            <Text className="text-[18px] font-normal">: ₹{PlatformFee}</Text>
+                            <Text className="text-[18px] font-normal text-red-400">: ₹{totalDiscount}</Text>
                         </View>
                     </View>
 
@@ -93,7 +93,7 @@ const ModalBooking = ({ hours, setIsVisible, isVisible, setEstimateAmount, handl
                         </View>
 
                         <View className="w-[50%]">
-                            <Text className="text-[18px] font-bold">₹ {EstimatedAmount}</Text>
+                            <Text className="text-[18px] font-bold">: ₹ {EstimatedAmount}</Text>
                         </View>
                     </View>
 
@@ -118,7 +118,7 @@ const ModalBooking = ({ hours, setIsVisible, isVisible, setEstimateAmount, handl
                     </ScrollView>
 
 
-                    <View className="w-[50%] h-10 mt-10 self-center rounded-[10px]" style={{ backgroundColor: COLORS.primary }}>
+                    <View className="w-[50%] h-10 mt-6 mb-10 self-center rounded-[10px]" style={{ backgroundColor: COLORS.primary }}>
                         <TouchableOpacity onPress={() => withoutPayment()} className="rounded-[10px] w-full h-full justify-center items-center">
                             <Text className="text-center text-[18px] text-white font-bold">Confirm Booking</Text>
                         </TouchableOpacity>

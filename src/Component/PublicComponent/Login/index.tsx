@@ -45,8 +45,10 @@ const Login = () => {
         
         try {
             const res = await oneSignalservice(data)
-            const { success = false, message = '' } = res;
-            if(success){
+            const { data:{ success = false, message = ''} } = res;
+            console.log("one", res?.data);
+            
+            if(success === true){
                 navigation.navigate("OwnerHome");
             } else {
                 showError(message)
@@ -77,8 +79,10 @@ const Login = () => {
         
         try {
             const response = await FetchLogin(data);
+            const { data: { message = '', status = 0 } } = response
+            console.log("login",response?.data);
             
-            if (response.status === 200) {
+            if (status === 200) {
                 // ONESIGNAL_PLAYER_ID
                 await AsyncStorage.setItem("UserData", JSON.stringify(response.data.user));
                 await AsyncStorage.setItem("token", response.data.token);
@@ -87,8 +91,7 @@ const Login = () => {
                 setEmail(null);
                 setPassword(null);
             } else {
-                setEmail(null);
-                setPassword(null);
+                showError(message)
             } 
 
         } catch (error: any) {

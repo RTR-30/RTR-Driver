@@ -14,12 +14,14 @@ import { showError } from "../../../../Common/ToastMessage";
 import Header from "../../../../Common/Header";
 import { COLORS } from "../../../../utils/ColorCode";
 import DatePickers from "../../../../Common/DatePicker";
+import Loader from "../../../../Common/Loader";
 
 const Statistics = () => {
     const value = "Statistics";
 
     const [loading, setLoading] = useState<boolean>(false);
     const [data, setData] = useState<any>({});
+    const [isFilterApplied, setIsFilterApplied] = useState(false);
 
     const [startDate, setStartDate] = useState<any>();
     const [endDate, setEndDate] = useState<any>();
@@ -53,6 +55,8 @@ const Statistics = () => {
                 ...statisticsData,
                 filter: defaultValue,
             })
+
+            setIsFilterApplied(true);
             fetchData(payload)
 
         } else {
@@ -64,6 +68,11 @@ const Statistics = () => {
             const payload = await {
                 filter: values
             }
+            if (values === "all_time") {
+                setIsFilterApplied(false);
+            } else {
+                setIsFilterApplied(true);
+            }
             fetchData(payload)
         }
     }
@@ -73,7 +82,7 @@ const Statistics = () => {
         try {
             const res = await StatisticService(payload)
             const { data: { success = false, data = {} } } = res;
-            
+
             if (success === true) {
                 setData(data)
             } else {
@@ -85,6 +94,22 @@ const Statistics = () => {
             setLoading(false)
         }
     }
+
+    const clearFilter = () => {
+        setStartDate(undefined);
+        setEndDate(undefined);
+
+        setStatisticsData({
+            filter: "all_time",
+            startDate: "",
+            endDate: "",
+        });
+
+        // Reload all-time statistics
+        fetchData({
+            filter: "all_time",
+        });
+    };
 
     const formatDate = (date: Date) => {
         return `${date.getFullYear()}-${String(
@@ -102,6 +127,12 @@ const Statistics = () => {
                 <Header value={value} />
             </View>
 
+
+            {loading ? (
+                <View className="absolute justify-center items-center h-full w-full">
+                    <Loader/>
+                </View>
+            ) : null}
             <View style={{ flex: 9, padding: 10, backgroundColor: '#fff', borderTopLeftRadius: 30, borderTopRightRadius: 30 }}>
                 <View className="flex-1">
                     <ScrollView
@@ -132,7 +163,7 @@ const Statistics = () => {
                     </ScrollView>
 
                     <View className="p-2 w-full flex-row justify-around border-t-[0.5px] border-black">
-                        <View className="w-[40%] h-11 bg-gray-300 p-2 justify-center items-center rounded-xl">
+                        <View className="w-[36%] h-11 bg-gray-300 p-2 justify-center items-center rounded-xl">
                             <DatePickers
                                 value={startDate}
                                 placeholder="Start Date"
@@ -147,7 +178,7 @@ const Statistics = () => {
                             />
                         </View>
 
-                        <View className="w-[40%] h-11 bg-gray-300 p-2 justify-center items-center rounded-xl">
+                        <View className="w-[36%] h-11 bg-gray-300 p-2 justify-center items-center rounded-xl">
                             <DatePickers
                                 value={endDate}
                                 placeholder="End Date"
@@ -168,6 +199,17 @@ const Statistics = () => {
                                 <Ionicons name="search" color={'white'} size={20} />
                             </TouchableOpacity>
                         </View>
+
+                        {isFilterApplied && (
+                            <View className="w-[12%] h-11 bg-red-600 p-2 justify-center items-center rounded-xl">
+                                <TouchableOpacity
+                                    onPress={clearFilter}
+                                    className="h-full w-full justify-center items-center"
+                                >
+                                    <Ionicons name="close" color="white" size={20} />
+                                </TouchableOpacity>
+                            </View>
+                        )}
                     </View>
                 </View>
 
@@ -190,7 +232,7 @@ const Statistics = () => {
                                 <Text className="text-[20px] font-bold" style={{ color: COLORS.primary }}>{data?.completedBookings}</Text>
                             </View>
                         </View>
-                        
+
                         <View className="p-2 w-[30%] h-28 border-[1px] border-black rounded-lg bg-white" style={{ elevation: 3, shadowColor: 'black' }}>
                             <View className="w-full h-[50%] justify-center items-center">
                                 <Text className="text-[18px] font-bold text-black text-center">Cancelled Bookings</Text>
