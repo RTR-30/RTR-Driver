@@ -1,56 +1,95 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
     FlatList,
     Image,
     Text,
     TouchableOpacity,
     View,
+    SafeAreaView,
+    StatusBar,
+    Share,
+    RefreshControl,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import Clipboard from '@react-native-clipboard/clipboard';
+import Clipboard from "@react-native-clipboard/clipboard";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { referalHistoryService } from "./helper";
-import { Colors } from "react-native/Libraries/NewAppScreen";
-import { showError } from "../../../../Common/ToastMessage";
+import { getUserDetailsService, referalHistoryService } from "./helper";
+import { showError, showSuccess } from "../../../../Common/ToastMessage";
 import Header from "../../../../Common/Header";
 import { COLORS } from "../../../../utils/ColorCode";
+import Loader from "../../../../Common/Loader";
 
-const GiftImg = require('../../../../../assets/Image/Gift.png')
+const GiftImg = require("../../../../../assets/Image/Gift.png");
 
 const MyReferal = () => {
-    const value = "My Referal";
-    const backNavigate = true;
+    const value = "Refer & Earn";
 
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState<boolean>(false);
+    const [refreshing, setRefreshing] = useState<boolean>(false);
     const [userData, setUserData] = useState<any>(null);
-    const [referalHistory, setReferalHistory] = useState<any>(null);
+    const [referalHistory, setReferalHistory] = useState<any[]>([]);
+    const [copied, setCopied] = useState<boolean>(false);
 
-    const [referalAmount, setReferalAmount] = useState<any>({
+    const [referalAmount, setReferalAmount] = useState({
         pending: 0,
-        confirm: 0
-    })
+        confirm: 0,
+    });
 
     const copyToClipboard = () => {
-        Clipboard.setString(userData?.referral_code);
+        if (userData?.referral_code) {
+            Clipboard.setString(userData.referral_code);
+            setCopied(true);
+            showSuccess("Referral code copied to clipboard!");
+            setTimeout(() => setCopied(false), 2500);
+        } else {
+            showError("Referral code not available");
+        }
     };
 
-
-    const fetchReferalHistory = async () => {
-        setLoading(true);
-
+    const shareReferral = async () => {
+        if (!userData?.referral_code) return;
         try {
-            const res = await referalHistoryService()
-            const { data: { history = [], success = false } } = res
+            await Share.share({
+                message: `Hire verified on-demand drivers with RTR Driver! Use my referral code ${userData.referral_code} when signing up to get started: https://play.google.com/store/apps/details?id=com.driveforu`,
+            });
+        } catch (error) {
+            console.warn("Share error:", error);
+        }
+    };
+
+    const fetchUsersData = async () => {
+        setLoading(true);
+        try {
+            const res = await getUserDetailsService();
+            const { data: { success = false, user = {} } } = res;
 
             if (success === true) {
-                setReferalHistory(history)
+                setUserData(user);
+            } else {
+                showError("Error Referal Code")
+            }
+        } catch (error) {
+            showError(error)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const fetchReferalHistory = async (isRefresh = false) => {
+        if (!isRefresh) setLoading(true);
+
+        try {
+            const res = await referalHistoryService();
+            const { data: { history = [], success = false } } = res;
+
+            if (success === true) {
+                setReferalHistory(history);
 
                 let pending = 0;
                 let confirm = 0;
 
                 history.forEach((item: any) => {
                     const amount = Number(item.reward_amount) || 0;
-
                     if (item.status === "PENDING") {
                         pending += amount;
                     } else {
@@ -63,17 +102,25 @@ const MyReferal = () => {
                     confirm,
                 });
             } else {
-                showError("Error Referal History")
+                showError("Could not load referral history");
             }
         } catch (error) {
-            showError(error)
+            showError(error);
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
-    }
-    
+    };
+
+    const onRefresh = useCallback(() => {
+        setRefreshing(true);
+        fetchReferalHistory(true);
+    }, []);
+
     const formatDateTime = (dateString: any) => {
+        if (!dateString) return "";
         const date = new Date(dateString);
+        if (isNaN(date.getTime())) return String(dateString);
 
         return date.toLocaleString("en-IN", {
             day: "2-digit",
@@ -81,108 +128,258 @@ const MyReferal = () => {
             year: "numeric",
             hour: "2-digit",
             minute: "2-digit",
+            hour12: true,
         });
     };
 
     useEffect(() => {
-        const getUserData = async () => {
-            const user: any = await AsyncStorage.getItem("UserData");
-            if (user) {
-                setUserData(JSON.parse(user));
-            }
-        }
-
-        getUserData();
-        fetchReferalHistory()
+        fetchReferalHistory();
+        fetchUsersData();
     }, []);
 
-    return (
-        <View className="flex-1" style={{backgroundColor: COLORS.primary}}>
-            <View className="flex-1">
-                <Header value={value} backNavigate={backNavigate} />
-            </View>
-
-            <View className="flex-[9] bg-white rounded-t-[30px]">
-                <View className="w-full p-5 rounded-b-[30px]" style={{backgroundColor:COLORS.primary}}>
-                    <View className="mt-1">
-                        <Text className="text-white font-bold text-[25px] text-center">Referal Your Friend And Earn</Text>
+    const renderHeader = () => (
+        <View className="mb-4">
+            {/* Promo Hero Card */}
+            <View
+                className="bg-white rounded-3xl p-5 border border-slate-100 mb-4"
+                style={{ elevation: 2 }}
+            >
+                {/* Top Promo Row with Illustration */}
+                <View className="flex-row items-center justify-between mb-4">
+                    <View className="flex-1 mr-2">
+                        <View className="self-start bg-red-50 border border-red-100 px-2.5 py-0.5 rounded-full mb-1.5">
+                            <Text className="text-[10px] font-extrabold text-[#E0211F] tracking-wider uppercase">
+                                Share & Earn
+                            </Text>
+                        </View>
+                        <Text className="text-[20px] font-black text-slate-900 tracking-tight">
+                            Invite Your Friends
+                        </Text>
+                        <Text className="text-[12px] text-slate-500 font-medium mt-1 leading-4">
+                            Share your referral code and earn bonuses when your friends take a trip.
+                        </Text>
                     </View>
 
-                    <View className="mt-2 w-full justify-center items-center">
-                        <View>
-                            <Image
-                                source={GiftImg}
-                                style={{ width: 120, height: 120, resizeMode: "contain" }}
-                            />
-                        </View>
-
-                        <View className="flex-row justify-between mt-2 px-2 w-full">
-                            <View className="items-center">
-                                <Text className="text-white font-bold">Pending</Text>
-                                <Text className="text-white text-[18px]">
-                                    ₹{referalAmount.pending}
-                                </Text>
-                            </View>
-
-                            <View className="items-center">
-                                <Text className="text-white font-bold">Confirmed</Text>
-                                <Text className="text-white text-[18px]">
-                                    ₹{referalAmount.confirm}
-                                </Text>
-                            </View>
-                        </View>
-                    </View>
-
-                    <View className="mt-5 border-dashed flex-row w-full border-white border-[1px] p-3">
-                        <View className="w-[60%] justify-center items-center border-dashed border-r-[1px] border-white">
-                            <Text className="text-white font-semibold text-[16px]">Your Refer Code</Text>
-                            <Text className="text-white font-bold text-[25px] mt-2">{userData?.referral_code}</Text>
-                        </View>
-
-                        <View className="w-[40%] justify-center items-center">
-                            <TouchableOpacity onPress={copyToClipboard}>
-                                <Text className="text-white font-bold text-[20px]">Copy Code</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
-
-                <View className="mt-1 w-full p-2">
-                    <Text className="text-black font-bold text-[14px]">My Referal History</Text>
-                    <View className="p-2">
-                        <FlatList
-                            data={referalHistory || []}
-                            keyExtractor={(item, index) =>
-                                item.id?.toString() || index.toString()
-                            }
-                            renderItem={({ item }) => (
-                                <View className="bg-white border border-gray-300 rounded-lg p-3 mb-2">
-                                    <Text className="text-black font-semibold">
-                                        Referal id : {item.referee_id}
-                                    </Text>
-
-                                    <Text className="text-gray-500 font-bold">
-                                        Joined : {formatDateTime(item.created_at)}
-                                    </Text>
-
-                                    <Text className="text-green-600 font-bold mt-1">
-                                        {item.status}
-                                    </Text>
-                                </View>
-                            )}
-                            ListEmptyComponent={() => (
-                                <View className="items-center mt-10">
-                                    <Text className="text-gray-500">
-                                        No referral history found
-                                    </Text>
-                                </View>
-                            )}
+                    <View className="w-20 h-20 justify-center items-center">
+                        <Image
+                            source={GiftImg}
+                            className="w-full h-full"
+                            resizeMode="contain"
                         />
                     </View>
                 </View>
+
+                {/* Earnings Summary Grid */}
+                <View className="flex-row gap-2.5 mb-4">
+                    {/* Confirmed Bonus */}
+                    <View className="flex-1 bg-emerald-50/70 border border-emerald-100 rounded-2xl p-3">
+                        <View className="flex-row items-center justify-between mb-1">
+                            <Text className="text-[11px] font-bold text-emerald-800">
+                                Confirmed
+                            </Text>
+                            <Ionicons name="checkmark-circle" size={14} color="#15803d" />
+                        </View>
+                        <Text className="text-[18px] font-black text-emerald-950">
+                            ₹{referalAmount.confirm}
+                        </Text>
+                    </View>
+
+                    {/* Pending Bonus */}
+                    <View className="flex-1 bg-amber-50/70 border border-amber-100 rounded-2xl p-3">
+                        <View className="flex-row items-center justify-between mb-1">
+                            <Text className="text-[11px] font-bold text-amber-800">
+                                Pending
+                            </Text>
+                            <Ionicons name="time" size={14} color="#b45309" />
+                        </View>
+                        <Text className="text-[18px] font-black text-amber-950">
+                            ₹{referalAmount.pending}
+                        </Text>
+                    </View>
+                </View>
+
+                {/* Referral Code Voucher Box */}
+                <View className="bg-slate-50 border border-dashed border-slate-300 rounded-2xl p-3.5 flex-row items-center justify-between mb-3">
+                    <View className="flex-1 mr-2">
+                        <Text className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">
+                            Your Referral Code
+                        </Text>
+                        <Text className="text-[20px] font-black text-slate-900 tracking-wider mt-0.5">
+                            {userData?.referral_code || "—"}
+                        </Text>
+                    </View>
+
+                    <TouchableOpacity
+                        onPress={copyToClipboard}
+                        className={`px-4 py-2.5 rounded-xl flex-row items-center shadow-sm ${copied ? "bg-emerald-600" : "bg-[#E0211F]"
+                            }`}
+                        style={{ elevation: 2 }}
+                        activeOpacity={0.8}
+                    >
+                        <Ionicons
+                            name={copied ? "checkmark" : "copy-outline"}
+                            size={16}
+                            color="#ffffff"
+                            style={{ marginRight: 5 }}
+                        />
+                        <Text className="text-white text-[13px] font-bold">
+                            {copied ? "Copied" : "Copy"}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+
+                {/* Share Button */}
+                <TouchableOpacity
+                    onPress={shareReferral}
+                    className="w-full bg-slate-900 h-12 rounded-xl flex-row items-center justify-center shadow-sm"
+                    style={{ elevation: 2 }}
+                    activeOpacity={0.8}
+                >
+                    <Ionicons
+                        name="share-social-outline"
+                        size={18}
+                        color="#ffffff"
+                        style={{ marginRight: 8 }}
+                    />
+                    <Text className="text-white text-[14px] font-bold">
+                        Share With Friends
+                    </Text>
+                </TouchableOpacity>
+            </View>
+
+            {/* Referral History Section Header */}
+            <View className="flex-row items-center justify-between mt-2 px-1">
+                <Text className="text-[15px] font-extrabold text-slate-800">
+                    Referral History
+                </Text>
+                <View className="bg-slate-200/80 px-2.5 py-0.5 rounded-full">
+                    <Text className="text-[11px] font-bold text-slate-600">
+                        {referalHistory.length} {referalHistory.length === 1 ? "Invite" : "Invites"}
+                    </Text>
+                </View>
             </View>
         </View>
-    )
-}
+    );
 
-export default MyReferal
+    const renderHistoryItem = ({ item }: { item: any }) => {
+        const isPending = item.status === "PENDING";
+
+        return (
+            <View
+                className="bg-white rounded-2xl p-4 border border-slate-100 mb-3"
+                style={{ elevation: 1 }}
+            >
+                <View className="flex-row items-center justify-between mb-2">
+                    <View className="flex-row items-center flex-1 mr-2">
+                        <View className="w-9 h-9 rounded-full bg-slate-100 justify-center items-center mr-2.5">
+                            <Ionicons name="person-outline" size={17} color="#475569" />
+                        </View>
+                        <View className="flex-1">
+                            <Text className="text-[14px] font-bold text-slate-800" numberOfLines={1}>
+                                Referral #{item.referee_id || item.id}
+                            </Text>
+                            {item.created_at ? (
+                                <Text className="text-[11px] text-slate-400 font-medium mt-0.5">
+                                    Joined {formatDateTime(item.created_at)}
+                                </Text>
+                            ) : null}
+                        </View>
+                    </View>
+
+                    {/* Status Badge */}
+                    <View
+                        className={`px-2.5 py-1 rounded-md flex-row items-center ${isPending ? "bg-amber-100" : "bg-emerald-100"
+                            }`}
+                    >
+                        <Ionicons
+                            name={isPending ? "time-outline" : "checkmark-circle-outline"}
+                            size={12}
+                            color={isPending ? "#b45309" : "#15803d"}
+                            style={{ marginRight: 3 }}
+                        />
+                        <Text
+                            className={`text-[11px] font-bold ${isPending ? "text-amber-800" : "text-emerald-800"
+                                }`}
+                        >
+                            {item.status || "Completed"}
+                        </Text>
+                    </View>
+                </View>
+
+                {/* Reward Amount Row */}
+                {item.reward_amount ? (
+                    <View className="flex-row items-center justify-between pt-2 border-t border-slate-100 mt-1">
+                        <Text className="text-[12px] font-semibold text-slate-500">
+                            Reward Amount
+                        </Text>
+                        <Text className="text-[14px] font-extrabold text-emerald-600">
+                            +₹{item.reward_amount}
+                        </Text>
+                    </View>
+                ) : null}
+            </View>
+        );
+    };
+
+    const renderEmpty = () => {
+        if (loading) return null;
+
+        return (
+            <View className="items-center justify-center py-12 px-6">
+                <View
+                    className="w-16 h-16 rounded-full bg-white justify-center items-center mb-3 border border-slate-100 shadow-sm"
+                    style={{ elevation: 1 }}
+                >
+                    <Ionicons name="gift-outline" size={30} color="#94a3b8" />
+                </View>
+                <Text className="text-[16px] font-bold text-slate-800 mb-1">
+                    No Referral History
+                </Text>
+                <Text className="text-[12px] text-slate-400 text-center leading-4 max-w-[240px]">
+                    Share your code with friends and family to see your invite rewards here.
+                </Text>
+            </View>
+        );
+    };
+
+    return (
+        <SafeAreaView className="flex-1 bg-[#E0211F]">
+            <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
+
+            {loading && <Loader />}
+
+            {/* Screen Header */}
+            <View className="h-[60px] bg-[#E0211F] justify-center">
+                <Header value={value} />
+            </View>
+
+            {/* Content Sheet */}
+            <View className="flex-1 bg-slate-50 rounded-t-[28px] overflow-hidden">
+                <FlatList
+                    data={referalHistory || []}
+                    keyExtractor={(item, index) => item.id?.toString() || index.toString()}
+                    renderItem={renderHistoryItem}
+                    ListHeaderComponent={renderHeader}
+                    ListEmptyComponent={renderEmpty}
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{
+                        paddingHorizontal: 16,
+                        paddingTop: 16,
+                        paddingBottom: 32,
+                        flexGrow: 1,
+                    }}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={refreshing}
+                            onRefresh={onRefresh}
+                            colors={[COLORS.primary]}
+                            tintColor={COLORS.primary}
+                        />
+                    }
+                />
+            </View>
+        </SafeAreaView>
+    );
+};
+
+export default MyReferal;

@@ -1,7 +1,7 @@
-export const Google_Key = "AIzaSyBgUp4ddMRJBFN8VuDL-Xfo75m0lIyHHts";
+export const Google_Key = "AIzaSyAHWYLIv-DU5RFPLD-0Ji-EEztDO02Mhfs";
 export const AppID = "63b4b0ba-aa00-4409-aaad-c2d75eb8ff86";
 
-export const ownBaseUrl = "http://10.47.98.206:8000/";
+export const ownBaseUrl = "http://10.210.240.206:8000/";
 
 export const baseUrl = `${ownBaseUrl}user/`;
 export const bookingBaseUrl = `${ownBaseUrl}booking/`;
@@ -15,8 +15,8 @@ export const signUp = "createUser";
 export const userData = "me";
 
 export const SignUpEmailVerify = {
-    confirmEmail:"confirmEmail",
-    verifyEmail:"verifyEmail"
+    confirmEmail: "confirmEmail",
+    verifyEmail: "verifyEmail"
 }
 
 export const createBooking = "createBooking";
@@ -30,23 +30,23 @@ export const bookingsApis = {
 }
 
 export const payment = {
-    createOrders : "create-order",
-    verifyPayment : "verify-payment"
+    createOrders: "create-order",
+    verifyPayment: "verify-payment"
 }
 
 export const forget = {
-    verifyEmail : "forget-password",
-    verifyOtp : "verifyOtp",
-    forgetPassword : "reset-password"
+    verifyEmail: "forget-password",
+    verifyOtp: "verifyOtp",
+    forgetPassword: "reset-password"
 }
 
 export const tripTypeApi = {
-    tripTypes : "trip-types",
-    tripTypePament : "trip-payments?tripTypeId="
+    tripTypes: "trip-types",
+    tripTypePament: "trip-payments?tripTypeId="
 }
 
 export const OneSignalAPi = {
-    UserDevices : "user/devices"
+    UserDevices: "user/devices"
 }
 
 export const referalApi = {

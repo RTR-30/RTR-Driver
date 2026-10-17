@@ -1,10 +1,15 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView, ToastAndroid } from "react-native";
+import React, { useEffect, useMemo } from "react";
+import {
+    View,
+    Text,
+    TouchableOpacity,
+    Modal,
+    ScrollView,
+    TouchableWithoutFeedback,
+    Dimensions,
+} from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import RazorpayCheckout from "react-native-razorpay";
-import { createOrder, verifyPayments } from "./helper";
 import { COLORS } from "../../../../utils/ColorCode";
-import { showError } from "../../../../Common/ToastMessage";
 
 export type MoreProps = {
     hours: any;
@@ -15,28 +20,44 @@ export type MoreProps = {
     handleBooking: () => void;
 };
 
-const ModalBooking = ({ hours, setIsVisible, isVisible, setEstimateAmount, handleBooking, TripDetails }: MoreProps) => {
+const ModalBooking = ({
+    hours,
+    setIsVisible,
+    isVisible,
+    setEstimateAmount,
+    handleBooking,
+    TripDetails,
+}: MoreProps) => {
+    const descriptionList = useMemo(() => {
+        try {
+            if (typeof TripDetails?.trip_type_description === "string") {
+                return JSON.parse(TripDetails.trip_type_description);
+            }
+            if (Array.isArray(TripDetails?.trip_type_description)) {
+                return TripDetails.trip_type_description;
+            }
+        } catch (error) {
+            console.warn("Error parsing trip_type_description:", error);
+        }
+        return [];
+    }, [TripDetails?.trip_type_description]);
 
-    const descriptionList = TripDetails?.trip_type_description
-        ? JSON.parse(TripDetails.trip_type_description)
-        : [];
+    const totalAmount = Number(TripDetails?.total_amount) || 0;
+    const taxRate = (Number(TripDetails?.tax) || 0) / 100;
+    const GST = Math.round(totalAmount * taxRate);
 
-    const tax = TripDetails?.tax / 100;
-    const GST = Math.round(TripDetails?.total_amount * tax);
+    const platformFeeRate = (Number(TripDetails?.platform_fee) || 0) / 100;
+    const PlatformFee = Math.round(totalAmount * platformFeeRate);
 
-    const appFees = TripDetails?.platform_fee / 100;
-    const PlatformFee = Math.round(TripDetails?.total_amount * appFees);
-
-    const EstimatedAmount = Number(TripDetails?.driver_charge) + Number(GST) + Number(PlatformFee)
-    const totalDiscount = TripDetails?.total_amount - EstimatedAmount
-
-    const withoutPayment = () => {
-        handleBooking();
-    }
+    const driverCharge = Number(TripDetails?.driver_charge) || 0;
+    const EstimatedAmount = driverCharge + GST + PlatformFee;
+    const totalDiscount = totalAmount > EstimatedAmount ? totalAmount - EstimatedAmount : 0;
 
     useEffect(() => {
-        setEstimateAmount(EstimatedAmount)
-    }, [EstimatedAmount])
+        if (setEstimateAmount && !isNaN(EstimatedAmount)) {
+            setEstimateAmount(EstimatedAmount);
+        }
+    }, [EstimatedAmount, setEstimateAmount]);
 
     return (
         <Modal
@@ -44,97 +65,245 @@ const ModalBooking = ({ hours, setIsVisible, isVisible, setEstimateAmount, handl
             animationType="slide"
             visible={isVisible}
             onRequestClose={() => setIsVisible(false)}
+            statusBarTranslucent
         >
-            <View style={{ backgroundColor: "rgba(0,0,0,0.5)" }} className="flex-1 justify-center items-center">
-                <View className="w-[95%] rounded-20 p-1 bg-white rounded-10">
-                    <View className="flex-row justify-between items-center w-full" style={{ backgroundColor: COLORS.primary }}>
-                        <Text className="text-[18px] font-bold text-white left-[10%]">Trip Fair</Text>
-                        <TouchableOpacity onPress={() => setIsVisible(false)} className="w-[20%] self-end" style={{ paddingVertical: 10, paddingHorizontal: 20 }}>
-                            {/* <Text style={styles.closeText}>Close</Text> */}
-                            <Ionicons name="close" size={20} color={"white"} style={{ alignSelf: 'flex-end' }} />
-                        </TouchableOpacity>
-                    </View>
+            <TouchableWithoutFeedback onPress={() => setIsVisible(false)}>
+                <View className="flex-1 justify-end bg-black/60">
+                    <TouchableWithoutFeedback onPress={() => {}}>
+                        <View className="bg-white rounded-t-[32px] pt-3 pb-8 px-5 w-full shadow-2xl">
+                            {/* Drag Indicator Handle */}
+                            <View className="w-12 h-1.5 bg-slate-200 rounded-full self-center mb-3" />
 
-                    <View className="w-full justify-center items-center flex-row">
-                        <Text className="text-[18px] font-extrabold text-black text-center">
-                            {hours} hours trip
-                        </Text>
-                    </View>
-
-                    <View className="bg-white w-full p-[10px] flex-row border-b-[0.5px]">
-                        <View className="w-[50%]">
-                            <Text className="text-[18px] font-bold">Total Amount</Text>
-                        </View>
-
-                        <View className="w-[50%]">
-                            <Text className="text-[18px] font-bold">: ₹{TripDetails?.total_amount}</Text>
-                        </View>
-                    </View>
-
-                    <View className="bg-white w-full p-[10px] flex-row">
-                        <View className="w-[50%]">
-                            <Text className="text-[18px] font-normal">Driver Charge</Text>
-                            <Text className="text-[18px] font-normal">GST+</Text>
-                            <Text className="text-[18px] font-normal">Platform Fee</Text>
-                            <Text className="text-[18px] font-normal text-red-400">RTR Discount-</Text>
-                        </View>
-
-                        <View className="w-[50%]">
-                            <Text className="text-[18px] font-normal">: ₹{TripDetails?.driver_charge}</Text>
-                            <Text className="text-[18px] font-normal">: ₹{GST}</Text>
-                            <Text className="text-[18px] font-normal">: ₹{PlatformFee}</Text>
-                            <Text className="text-[18px] font-normal text-red-400">: ₹{totalDiscount}</Text>
-                        </View>
-                    </View>
-
-                    <View className="bg-white w-full p-[10px] flex-row border-t-[0.5px]">
-                        <View className="w-[50%]">
-                            <Text className="text-[18px] font-bold">Estimated RTR Fare</Text>
-                        </View>
-
-                        <View className="w-[50%]">
-                            <Text className="text-[18px] font-bold">: ₹ {EstimatedAmount}</Text>
-                        </View>
-                    </View>
-
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                    >
-                        <View className="flex-row p-2 bg-[#f3f4f7] rounded-[10px]">
-
-                            {descriptionList.map((item: any, index: number) => (
-                                <View
-                                    key={index}
-                                    className="bg-white px-3 py-1 rounded-[8px] mr-2"
-                                >
-                                    <Text className="text-black text-[14px] font-serif">
-                                        {item.value}
+                            {/* Header Row */}
+                            <View className="flex-row items-center justify-between pb-3 border-b border-slate-100 mb-3">
+                                <View className="flex-1 mr-2">
+                                    <Text className="text-[19px] font-black text-slate-900 tracking-tight">
+                                        Trip Fare Breakdown
+                                    </Text>
+                                    <Text className="text-[12px] font-medium text-slate-500 mt-0.5">
+                                        Review your fare details before confirming
                                     </Text>
                                 </View>
-                            ))}
 
+                                <TouchableOpacity
+                                    onPress={() => setIsVisible(false)}
+                                    className="w-9 h-9 rounded-full bg-slate-100 items-center justify-center"
+                                    activeOpacity={0.7}
+                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                >
+                                    <Ionicons name="close" size={18} color="#64748b" />
+                                </TouchableOpacity>
+                            </View>
+
+                            <ScrollView
+                                showsVerticalScrollIndicator={false}
+                                bounces={false}
+                                style={{ maxHeight: Dimensions.get("window").height * 0.65 }}
+                            >
+                                {/* Trip Overview Highlight Badge */}
+                                <View className="flex-row items-center justify-between bg-slate-50 border border-slate-100 rounded-2xl p-3.5 mb-3">
+                                    <View className="flex-row items-center flex-1 mr-2">
+                                        <View className="w-10 h-10 rounded-xl bg-red-50 border border-red-100 items-center justify-center mr-3">
+                                            <Ionicons name="time" size={20} color={COLORS.primary} />
+                                        </View>
+                                        <View>
+                                            <Text className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
+                                                Selected Duration
+                                            </Text>
+                                            <Text className="text-[15px] font-black text-slate-900">
+                                                {hours ? `${hours} Hours Trip` : "Custom Trip"}
+                                            </Text>
+                                        </View>
+                                    </View>
+
+                                    <View className="bg-red-50 border border-red-100 px-3 py-1 rounded-full">
+                                        <Text className="text-[11px] font-bold text-[#E0211F]">
+                                            Dedicated Driver
+                                        </Text>
+                                    </View>
+                                </View>
+
+                                {/* Itemized Fare Card */}
+                                <View className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-4 mb-3">
+                                    <Text className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider mb-2.5">
+                                        Fare Breakdown
+                                    </Text>
+
+                                    {/* Driver Charge */}
+                                    <View className="flex-row items-center justify-between py-1.5">
+                                        <View className="flex-row items-center">
+                                            <Ionicons
+                                                name="person-outline"
+                                                size={15}
+                                                color="#64748b"
+                                                style={{ marginRight: 8 }}
+                                            />
+                                            <Text className="text-[13px] font-semibold text-slate-700">
+                                                Driver Charge
+                                            </Text>
+                                        </View>
+                                        <Text className="text-[14px] font-bold text-slate-900">
+                                            ₹{driverCharge}
+                                        </Text>
+                                    </View>
+
+                                    {/* Platform Fee */}
+                                    <View className="flex-row items-center justify-between py-1.5">
+                                        <View className="flex-row items-center">
+                                            <Ionicons
+                                                name="hardware-chip-outline"
+                                                size={15}
+                                                color="#64748b"
+                                                style={{ marginRight: 8 }}
+                                            />
+                                            <Text className="text-[13px] font-semibold text-slate-700">
+                                                Platform Fee
+                                                {TripDetails?.platform_fee ? ` (${TripDetails.platform_fee}%)` : ""}
+                                            </Text>
+                                        </View>
+                                        <Text className="text-[14px] font-bold text-slate-900">
+                                            ₹{PlatformFee}
+                                        </Text>
+                                    </View>
+
+                                    {/* Taxes & GST */}
+                                    <View className="flex-row items-center justify-between py-1.5">
+                                        <View className="flex-row items-center">
+                                            <Ionicons
+                                                name="receipt-outline"
+                                                size={15}
+                                                color="#64748b"
+                                                style={{ marginRight: 8 }}
+                                            />
+                                            <Text className="text-[13px] font-semibold text-slate-700">
+                                                Taxes & GST
+                                                {TripDetails?.tax ? ` (${TripDetails.tax}%)` : ""}
+                                            </Text>
+                                        </View>
+                                        <Text className="text-[14px] font-bold text-slate-900">
+                                            ₹{GST}
+                                        </Text>
+                                    </View>
+
+                                    {/* RTR Discount if any */}
+                                    {totalDiscount > 0 && (
+                                        <View className="flex-row items-center justify-between py-1.5">
+                                            <View className="flex-row items-center">
+                                                <Ionicons
+                                                    name="pricetag-outline"
+                                                    size={15}
+                                                    color="#15803d"
+                                                    style={{ marginRight: 8 }}
+                                                />
+                                                <Text className="text-[13px] font-bold text-emerald-700">
+                                                    RTR Discount
+                                                </Text>
+                                            </View>
+                                            <Text className="text-[14px] font-extrabold text-emerald-700">
+                                                -₹{totalDiscount}
+                                            </Text>
+                                        </View>
+                                    )}
+
+                                    {/* Dashed Separator */}
+                                    <View className="border-t border-dashed border-slate-300 my-2.5" />
+
+                                    {/* Total Estimated Fare */}
+                                    <View className="flex-row items-center justify-between pt-1">
+                                        <View>
+                                            <Text className="text-[14px] font-black text-slate-900">
+                                                Estimated RTR Fare
+                                            </Text>
+                                            <Text className="text-[11px] font-medium text-slate-400 mt-0.5">
+                                                Inclusive of all taxes
+                                            </Text>
+                                        </View>
+
+                                        <View className="items-end">
+                                            {totalDiscount > 0 && (
+                                                <Text className="text-[12px] font-semibold text-slate-400 line-through">
+                                                    ₹{totalAmount}
+                                                </Text>
+                                            )}
+                                            <Text className="text-[22px] font-black text-[#E0211F]">
+                                                ₹{EstimatedAmount}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                </View>
+
+                                {/* Trip Features & Inclusions Details (Full View, No Horizontal Scroll) */}
+                                {descriptionList && descriptionList.length > 0 && (
+                                    <View className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-4 mb-3">
+                                        <View className="flex-row items-center justify-between mb-3">
+                                            <Text className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">
+                                                Trip Features & Inclusions
+                                            </Text>
+                                            <View className="bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">
+                                                <Text className="text-[10px] font-bold text-emerald-700">
+                                                    {descriptionList.length} Details
+                                                </Text>
+                                            </View>
+                                        </View>
+
+                                        <View>
+                                            {descriptionList.map((item: any, index: number) => {
+                                                const label = item?.value || (typeof item === "string" ? item : "");
+                                                if (!label) return null;
+
+                                                const isLast = index === descriptionList.length - 1;
+
+                                                return (
+                                                    <View
+                                                        key={index}
+                                                        className={`flex-row items-start ${
+                                                            !isLast ? "mb-2.5 pb-2.5 border-b border-slate-200/60" : ""
+                                                        }`}
+                                                    >
+                                                        <View className="w-5 h-5 rounded-full bg-emerald-100 items-center justify-center mr-2.5 mt-0.5">
+                                                            <Ionicons name="checkmark" size={13} color="#15803d" />
+                                                        </View>
+                                                        <Text className="text-[13px] font-medium text-slate-700 flex-1 leading-5">
+                                                            {label}
+                                                        </Text>
+                                                    </View>
+                                                );
+                                            })}
+                                        </View>
+                                    </View>
+                                )}
+
+                                {/* Trust & Guarantee Pill */}
+                                <View className="flex-row items-center bg-emerald-50/70 border border-emerald-100 rounded-xl px-3.5 py-2.5 mb-5">
+                                    <Ionicons name="shield-checkmark" size={17} color="#15803d" />
+                                    <Text className="text-[12px] font-semibold text-emerald-800 ml-2.5 flex-1">
+                                        No advance payment required. Pay directly after trip completion.
+                                    </Text>
+                                </View>
+                            </ScrollView>
+
+                            {/* Confirm Booking CTA */}
+                            <TouchableOpacity
+                                onPress={handleBooking}
+                                className="w-full h-13 bg-[#E0211F] rounded-2xl flex-row items-center justify-center shadow-md active:opacity-90 p-2"
+                                style={{ elevation: 3 }}
+                            >
+                                <Ionicons
+                                    name="checkmark-done"
+                                    size={20}
+                                    color="#ffffff"
+                                    style={{ marginRight: 8 }}
+                                />
+                                <Text className="text-white text-[16px] font-black tracking-wide">
+                                    Confirm Booking
+                                </Text>
+                            </TouchableOpacity>
                         </View>
-                    </ScrollView>
-
-
-                    <View className="w-[50%] h-10 mt-6 mb-10 self-center rounded-[10px]" style={{ backgroundColor: COLORS.primary }}>
-                        <TouchableOpacity onPress={() => withoutPayment()} className="rounded-[10px] w-full h-full justify-center items-center">
-                            <Text className="text-center text-[18px] text-white font-bold">Confirm Booking</Text>
-                        </TouchableOpacity>
-                    </View>
+                    </TouchableWithoutFeedback>
                 </View>
-            </View>
+            </TouchableWithoutFeedback>
         </Modal>
     );
 };
-
-const styles = StyleSheet.create({
-    amountText: {
-        fontSize: 18,
-        fontWeight: "bold",
-        marginBottom: 20,
-    },
-});
 
 export default ModalBooking;
