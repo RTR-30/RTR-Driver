@@ -45,8 +45,9 @@ const Statistics = () => {
             }
 
             const payload = {
-                startDate: statisticsData?.startDate,
-                endDate: statisticsData?.endDate,
+                filter: "",
+                startDate: statisticsData?.startDate || "",
+                endDate: statisticsData?.endDate || "",
             };
 
             setStatisticsData((prev: any) => ({
@@ -58,7 +59,7 @@ const Statistics = () => {
             fetchData(payload);
         } else {
             setStatisticsData({
-                filter: values,
+                filter: values || "",
                 startDate: "",
                 endDate: "",
             });
@@ -66,7 +67,9 @@ const Statistics = () => {
             setEndDate(undefined);
 
             const payload = {
-                filter: values,
+                filter: values || "",
+                startDate: "",
+                endDate: "",
             };
 
             if (values === "all_time") {
@@ -81,7 +84,12 @@ const Statistics = () => {
     const fetchData = async (payload?: any) => {
         setLoading(true);
         try {
-            const res = await StatisticService(payload);
+            const formattedPayload = {
+                filter: payload?.filter || "",
+                startDate: payload?.startDate || "",
+                endDate: payload?.endDate || "",
+            };
+            const res = await StatisticService(formattedPayload);
             const { data: { success = false, data = {} } } = res;
 
             if (success === true) {
@@ -109,6 +117,8 @@ const Statistics = () => {
 
         fetchData({
             filter: "all_time",
+            startDate: "",
+            endDate: "",
         });
     };
 
@@ -167,18 +177,16 @@ const Statistics = () => {
                                     <TouchableOpacity
                                         key={index}
                                         onPress={() => chooseFilter(false, item.value)}
-                                        className={`mr-2.5 px-4 py-2 rounded-full border ${
-                                            isSelected
+                                        className={`mr-2.5 px-4 py-2 rounded-full border ${isSelected
                                                 ? "bg-[#E0211F] border-[#E0211F]"
                                                 : "bg-white border-slate-200"
-                                        }`}
+                                            }`}
                                         style={{ elevation: isSelected ? 2 : 0 }}
                                         activeOpacity={0.7}
                                     >
                                         <Text
-                                            className={`font-bold text-[13px] ${
-                                                isSelected ? "text-white" : "text-slate-600"
-                                            }`}
+                                            className={`font-bold text-[13px] ${isSelected ? "text-white" : "text-slate-600"
+                                                }`}
                                         >
                                             {item.key}
                                         </Text>

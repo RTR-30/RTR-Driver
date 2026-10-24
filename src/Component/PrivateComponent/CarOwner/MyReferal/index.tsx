@@ -61,8 +61,9 @@ const MyReferal = () => {
         setLoading(true);
         try {
             const res = await getUserDetailsService();
+            console.log("wu", res);
             const { data: { success = false, user = {} } } = res;
-
+            
             if (success === true) {
                 setUserData(user);
             } else {

@@ -40,7 +40,8 @@ const OrderHistory = () => {
         try {
             const response = await FetchOrderHistory(limit, page);
             const { data: { status = 0 } } = response;
-
+            console.log(JSON.stringify(response));
+    
             if (status === 200) {
                 const bookingList = response.data?.bookingList || [];
 

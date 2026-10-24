@@ -13,7 +13,7 @@ import {
     BackHandler,
     StatusBar,
 } from 'react-native';
-import MapView, { Marker, Region, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Region, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -26,46 +26,54 @@ import Header from '../Header';
 
 const GOOGLE_API_KEY = Google_Key;
 
+type Coordinate = {
+    latitude: number;
+    longitude: number;
+};
+
+const DEFAULT_COORDINATE: Coordinate = {
+    latitude: 13.0827,
+    longitude: 80.2707,
+};
+
+const DEFAULT_REGION: Region = {
+    ...DEFAULT_COORDINATE,
+    latitudeDelta: 0.008,
+    longitudeDelta: 0.008,
+};
+
 export default function Googlemaps() {
     const navigation: any = useNavigation();
     const route: any = useRoute();
     const mapRef = useRef<MapView>(null);
 
-    // View state: false = "Select a location" screen (like Porter screenshot), true = Google Map screen
+    // View state: false = "Select a location" screen (Porter style), true = Google Map screen
     const [showMap, setShowMap] = useState(false);
 
-    // Current location state
+    // Current GPS location state
     const [currentAddress, setCurrentAddress] = useState('');
-    const [currentCoordinate, setCurrentCoordinate] = useState<{ latitude: number; longitude: number } | null>(null);
+    const [currentCoordinate, setCurrentCoordinate] = useState<Coordinate | null>(null);
     const [isLocatingCurrent, setIsLocatingCurrent] = useState(false);
 
-    // Map screen state
+    // Selected location & Map state
+    const [coordinate, setCoordinate] = useState<Coordinate>(DEFAULT_COORDINATE);
+    const [region, setRegion] = useState<Region>(DEFAULT_REGION);
     const [address, setAddress] = useState('');
     const [searchText, setSearchText] = useState('');
     const [predictions, setPredictions] = useState<any[]>([]);
     const [isFetchingPredictions, setIsFetchingPredictions] = useState(false);
     const [isLocatingMap, setIsLocatingMap] = useState(false);
     const [isReverseGeocoding, setIsReverseGeocoding] = useState(false);
-
-    const [coordinate, setCoordinate] = useState({
-        latitude: 13.0827,
-        longitude: 80.2707,
-    });
-
-    const [region, setRegion] = useState<Region>({
-        latitude: 13.0827,
-        longitude: 80.2707,
-        latitudeDelta: 0.02,
-        longitudeDelta: 0.02,
-    });
+    const [isMovingMap, setIsMovingMap] = useState(false);
 
     const searchTimeoutRef = useRef<any>(null);
     const regionChangeTimeoutRef = useRef<any>(null);
 
-    // Handle hardware back button when on map view
+    // Handle Android hardware back button
     useEffect(() => {
         const backAction = () => {
             if (showMap) {
+                Keyboard.dismiss();
                 setShowMap(false);
                 return true;
             }
@@ -76,7 +84,15 @@ export default function Googlemaps() {
         return () => backHandler.remove();
     }, [showMap]);
 
-    // Request device location permission
+    // Clean up timers on unmount
+    useEffect(() => {
+        return () => {
+            if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+            if (regionChangeTimeoutRef.current) clearTimeout(regionChangeTimeoutRef.current);
+        };
+    }, []);
+
+    // Request location permission
     const requestLocationPermission = async (): Promise<boolean> => {
         try {
             if (Platform.OS === 'android') {
@@ -122,7 +138,7 @@ export default function Googlemaps() {
         }
     };
 
-    // Reverse geocode latitude and longitude to human-readable address
+    // Reverse geocode latitude and longitude to readable address using Google Places API (New)
     const resolveAddress = async (latitude: number, longitude: number): Promise<string> => {
         try {
             const response = await fetch('https://places.googleapis.com/v1/places:searchNearby', {
@@ -154,37 +170,24 @@ export default function Googlemaps() {
             console.warn('Google reverse geocode error:', err);
         }
 
-        // Fallback to OpenStreetMap Nominatim
-        try {
-            const nomRes = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`,
-                {
-                    headers: {
-                        'User-Agent': 'Drive4U/1.0 (support@drive4u.in)',
-                    },
-                }
-            );
-            const nomData = await nomRes.json();
-            if (nomData?.display_name) {
-                return nomData.display_name;
-            }
-        } catch (nomErr) {
-            console.warn('Nominatim reverse geocode error:', nomErr);
-        }
-
         return `Lat: ${latitude.toFixed(5)}, Lng: ${longitude.toFixed(5)}`;
     };
 
-    // Reverse geocode for map
+    // Reverse geocode map coordinate and update address input & bottom card
     const reverseGeocodeMap = async (latitude: number, longitude: number) => {
         setIsReverseGeocoding(true);
-        const resolved = await resolveAddress(latitude, longitude);
-        setAddress(resolved);
-        setSearchText(resolved);
-        setIsReverseGeocoding(false);
+        try {
+            const resolved = await resolveAddress(latitude, longitude);
+            setAddress(resolved);
+            setSearchText(resolved);
+        } catch (error) {
+            console.warn('reverseGeocodeMap error:', error);
+        } finally {
+            setIsReverseGeocoding(false);
+        }
     };
 
-    // Fetch current GPS location
+    // Fetch device GPS current location
     const fetchCurrentLocation = async (navigateOnSuccess = false) => {
         const hasPermission = await requestLocationPermission();
         if (!hasPermission) return;
@@ -194,10 +197,9 @@ export default function Googlemaps() {
         Geolocation.getCurrentPosition(
             async (position) => {
                 const { latitude, longitude } = position.coords;
-                const newCoordinate = { latitude, longitude };
-                const newRegion = {
-                    latitude,
-                    longitude,
+                const newCoordinate: Coordinate = { latitude, longitude };
+                const newRegion: Region = {
+                    ...newCoordinate,
                     latitudeDelta: 0.008,
                     longitudeDelta: 0.008,
                 };
@@ -206,14 +208,26 @@ export default function Googlemaps() {
                 setCoordinate(newCoordinate);
                 setRegion(newRegion);
 
-                const resolved = await resolveAddress(latitude, longitude);
-                setCurrentAddress(resolved);
-                setAddress(resolved);
-                setSearchText(resolved);
-                setIsLocatingCurrent(false);
+                try {
+                    const resolved = await resolveAddress(latitude, longitude);
+                    setCurrentAddress(resolved);
+                    setAddress(resolved);
+                    setSearchText(resolved);
 
-                if (navigateOnSuccess) {
-                    navigateToTrip(resolved, newCoordinate);
+                    if (navigateOnSuccess) {
+                        navigateToTrip(resolved, newCoordinate);
+                    }
+                } catch (error) {
+                    const fallback = `Lat: ${latitude.toFixed(5)}, Lng: ${longitude.toFixed(5)}`;
+                    setCurrentAddress(fallback);
+                    setAddress(fallback);
+                    setSearchText(fallback);
+
+                    if (navigateOnSuccess) {
+                        navigateToTrip(fallback, newCoordinate);
+                    }
+                } finally {
+                    setIsLocatingCurrent(false);
                 }
             },
             (error) => {
@@ -227,13 +241,41 @@ export default function Googlemaps() {
         );
     };
 
-    // Auto-fetch current location on screen mount
+    // Auto-fetch GPS on initial screen load
     useEffect(() => {
         fetchCurrentLocation(false);
     }, []);
 
+    // Animate map camera to location when showMap becomes true
+    useEffect(() => {
+        if (showMap) {
+            const initialCoord = currentCoordinate || coordinate;
+            const initialReg: Region = {
+                ...initialCoord,
+                latitudeDelta: 0.008,
+                longitudeDelta: 0.008,
+            };
+            setCoordinate(initialCoord);
+            setRegion(initialReg);
+
+            const timer = setTimeout(() => {
+                mapRef.current?.animateToRegion(initialReg, 500);
+                if (!address) {
+                    reverseGeocodeMap(initialCoord.latitude, initialCoord.longitude);
+                } else {
+                    setSearchText(address);
+                }
+            }, 300);
+
+            return () => clearTimeout(timer);
+        }
+    }, [showMap]);
+
     // Navigate to Trip screen or call parent callback
-    const navigateToTrip = (selectedAddress: string, selectedCoordinate: { latitude: number; longitude: number }) => {
+    const navigateToTrip = (
+        selectedAddress: string,
+        selectedCoordinate: Coordinate
+    ) => {
         if (route?.params?.onSelectLocation) {
             route.params.onSelectLocation({
                 address: selectedAddress,
@@ -252,7 +294,7 @@ export default function Googlemaps() {
         }
     };
 
-    // User tapped "Use current location"
+    // User tapped "Use current location" on Screen 1
     const handleUseCurrentLocation = async () => {
         if (currentAddress && currentCoordinate) {
             navigateToTrip(currentAddress, currentCoordinate);
@@ -261,24 +303,27 @@ export default function Googlemaps() {
         }
     };
 
-    // User tapped "Select Address"
+    // User tapped "Select Address" on Screen 1
     const handleSelectAddress = () => {
         setShowMap(true);
-        if (currentCoordinate) {
-            mapRef.current?.animateToRegion({
-                ...currentCoordinate,
-                latitudeDelta: 0.008,
-                longitudeDelta: 0.008,
-            }, 500);
+    };
+
+    // Map region change in progress (user is actively panning/zooming)
+    const handleRegionChange = () => {
+        if (!isMovingMap) {
+            setIsMovingMap(true);
         }
     };
 
-    // Handle region change complete on map
+    // Map region change completed: Pin sets the new location
     const handleRegionChangeComplete = (reg: Region) => {
-        const newCoordinate = {
+        setIsMovingMap(false);
+
+        const newCoordinate: Coordinate = {
             latitude: reg.latitude,
             longitude: reg.longitude,
         };
+
         setCoordinate(newCoordinate);
         setRegion(reg);
 
@@ -288,10 +333,31 @@ export default function Googlemaps() {
 
         regionChangeTimeoutRef.current = setTimeout(async () => {
             await reverseGeocodeMap(newCoordinate.latitude, newCoordinate.longitude);
-        }, 500);
+        }, 400);
     };
 
-    // Map locate button
+    // User taps anywhere on the map: moves camera to center the tapped location under the pin
+    const handleMapPress = (event: any) => {
+        Keyboard.dismiss();
+        setPredictions([]);
+
+        const tappedCoord = event.nativeEvent?.coordinate;
+        if (!tappedCoord) return;
+
+        setCoordinate(tappedCoord);
+
+        const newReg: Region = {
+            ...tappedCoord,
+            latitudeDelta: region.latitudeDelta || 0.008,
+            longitudeDelta: region.longitudeDelta || 0.008,
+        };
+
+        setRegion(newReg);
+        mapRef.current?.animateToRegion(newReg, 450);
+        reverseGeocodeMap(tappedCoord.latitude, tappedCoord.longitude);
+    };
+
+    // Map locate button: animates camera to user's device GPS location
     const handleMapLocate = async () => {
         const hasPermission = await requestLocationPermission();
         if (!hasPermission) return;
@@ -300,17 +366,16 @@ export default function Googlemaps() {
         Geolocation.getCurrentPosition(
             async (position) => {
                 const { latitude, longitude } = position.coords;
-                const newCoordinate = { latitude, longitude };
-                const newRegion = {
-                    latitude,
-                    longitude,
+                const newCoordinate: Coordinate = { latitude, longitude };
+                const newRegion: Region = {
+                    ...newCoordinate,
                     latitudeDelta: 0.008,
                     longitudeDelta: 0.008,
                 };
 
                 setCoordinate(newCoordinate);
                 setRegion(newRegion);
-                mapRef.current?.animateToRegion(newRegion, 1000);
+                mapRef.current?.animateToRegion(newRegion, 800);
                 setIsLocatingMap(false);
 
                 await reverseGeocodeMap(latitude, longitude);
@@ -318,13 +383,13 @@ export default function Googlemaps() {
             (error) => {
                 setIsLocatingMap(false);
                 console.warn('Geolocation error:', error);
-                showError('Could not fetch current location');
+                showError('Could not fetch current GPS location.');
             },
             { enableHighAccuracy: true, timeout: 20000, maximumAge: 1000 }
         );
     };
 
-    // Handle search text change with Places API (New) Autocomplete
+    // Google Places API (New) Autocomplete search
     const handleSearchTextChange = (text: string) => {
         setSearchText(text);
 
@@ -334,6 +399,7 @@ export default function Googlemaps() {
 
         if (!text || text.trim().length < 2) {
             setPredictions([]);
+            setIsFetchingPredictions(false);
             return;
         }
 
@@ -345,16 +411,16 @@ export default function Googlemaps() {
                     headers: {
                         'Content-Type': 'application/json',
                         'X-Goog-Api-Key': GOOGLE_API_KEY,
-                        'X-Goog-FieldMask': 'suggestions.placePrediction.placeId,suggestions.placePrediction.text,suggestions.placePrediction.structuredFormat',
+                        'X-Goog-FieldMask': 'suggestions.placePrediction.placeId,suggestions.placePrediction.text.text',
                     },
                     body: JSON.stringify({
                         input: text,
-                        includedRegionCodes: ['IN'],
-                        languageCode: 'en',
+                        includedRegionCodes: ['in'],
                     }),
                 });
+
                 const data = await response.json();
-                if (data?.suggestions) {
+                if (data?.suggestions && Array.isArray(data.suggestions)) {
                     setPredictions(data.suggestions);
                 } else {
                     setPredictions([]);
@@ -365,29 +431,21 @@ export default function Googlemaps() {
             } finally {
                 setIsFetchingPredictions(false);
             }
-        }, 300);
+        }, 350);
     };
 
-    // Handle place selected from autocomplete dropdown
-    const handleSelectPrediction = async (predictionItem: any) => {
+    // User selects a suggestion from Google Places Autocomplete
+    const handleSelectPrediction = async (item: any) => {
         Keyboard.dismiss();
         setPredictions([]);
 
-        const placeId = predictionItem?.placeId || predictionItem?.placePrediction?.placeId || predictionItem?.id;
-        const predictionText =
-            predictionItem?.structuredFormat?.mainText?.text ||
-            predictionItem?.placePrediction?.structuredFormat?.mainText?.text ||
-            predictionItem?.text?.text ||
-            predictionItem?.placePrediction?.text?.text ||
-            '';
+        const placeId = item?.placePrediction?.placeId;
+        const placeText = item?.placePrediction?.text?.text || '';
 
-        if (predictionText) {
-            setSearchText(predictionText);
-            setAddress(predictionText);
-        }
+        setAddress(placeText);
+        setSearchText(placeText);
 
         if (!placeId) {
-            showError('Selected place ID not found');
             return;
         }
 
@@ -404,63 +462,38 @@ export default function Googlemaps() {
             const lat = placeData?.location?.latitude;
             const lng = placeData?.location?.longitude;
 
-            if (lat !== undefined && lng !== undefined) {
-                const newCoordinate = { latitude: lat, longitude: lng };
-                const newRegion = {
+            if (typeof lat === 'number' && typeof lng === 'number') {
+                const newCoordinate: Coordinate = { latitude: lat, longitude: lng };
+                const newRegion: Region = {
                     ...newCoordinate,
                     latitudeDelta: 0.008,
                     longitudeDelta: 0.008,
                 };
+
                 setCoordinate(newCoordinate);
                 setRegion(newRegion);
-                mapRef.current?.animateToRegion(newRegion, 1000);
+                mapRef.current?.animateToRegion(newRegion, 800);
 
-                const resolvedAddress = placeData?.formattedAddress || placeData?.displayName?.text || predictionText;
-                if (resolvedAddress) {
-                    setAddress(resolvedAddress);
-                    setSearchText(resolvedAddress);
+                if (placeData?.formattedAddress) {
+                    setAddress(placeData.formattedAddress);
+                    setSearchText(placeData.formattedAddress);
                 }
             } else {
-                showError('Could not retrieve coordinates for this location');
+                showError('Could not retrieve coordinates for this location.');
             }
         } catch (err) {
             console.warn('Place details fetch error:', err);
-            showError('Could not fetch location details');
+            showError('Could not fetch location details.');
         }
     };
 
-    // Handle marker drag completion
-    const handleMarkerDragEnd = async (event: any) => {
-        const newCoordinate = event.nativeEvent.coordinate;
-        setCoordinate(newCoordinate);
-        setRegion({
-            ...newCoordinate,
-            latitudeDelta: region.latitudeDelta,
-            longitudeDelta: region.longitudeDelta,
-        });
-        await reverseGeocodeMap(newCoordinate.latitude, newCoordinate.longitude);
-    };
-
-    // Handle tap on map
-    const handleMapPress = async (event: any) => {
-        Keyboard.dismiss();
-        const tappedCoord = event.nativeEvent.coordinate;
-        if (!tappedCoord) return;
-        setCoordinate(tappedCoord);
-        setRegion({
-            ...tappedCoord,
-            latitudeDelta: region.latitudeDelta,
-            longitudeDelta: region.longitudeDelta,
-        });
-        await reverseGeocodeMap(tappedCoord.latitude, tappedCoord.longitude);
-    };
-
-    // Confirm pickup location on map
+    // Confirm pickup location and proceed
     const handleConfirmLocation = () => {
-        if (!address && !coordinate.latitude) {
-            showError('Please search or select a pickup address');
+        if (!address.trim() && !coordinate.latitude) {
+            showError('Please search or select a pickup address.');
             return;
         }
+        Keyboard.dismiss();
         navigateToTrip(address, coordinate);
     };
 
@@ -479,70 +512,73 @@ export default function Googlemaps() {
 
                 {/* Main Content Sheet */}
                 <View style={styles.contentSheet}>
+                    <View style={styles.cardContainer}>
+                        {/* Option 1: Use Current Location */}
+                        <TouchableOpacity
+                            style={styles.cardRow}
+                            onPress={handleUseCurrentLocation}
+                            activeOpacity={0.7}
+                            disabled={isLocatingCurrent}
+                        >
+                            <View style={styles.iconCircle}>
+                                <Ionicons name="locate" size={22} color={COLORS.primary} />
+                            </View>
 
-                {/* Main Card with 2 Options */}
-                <View style={styles.cardContainer}>
-                    {/* Option 1: Use Current Location */}
-                    <TouchableOpacity
-                        style={styles.cardRow}
-                        onPress={handleUseCurrentLocation}
-                        activeOpacity={0.7}
-                    >
-                        <View style={styles.iconCircle}>
-                            <Ionicons name="locate" size={22} color={COLORS.primary} />
-                        </View>
+                            <View style={styles.cardTextWrapper}>
+                                <Text style={styles.cardTitle}>Use current location</Text>
+                                {isLocatingCurrent ? (
+                                    <View style={styles.detectingRow}>
+                                        <ActivityIndicator
+                                            size="small"
+                                            color={COLORS.primary}
+                                            style={{ marginRight: 6 }}
+                                        />
+                                        <Text style={styles.cardSubText}>Detecting current location...</Text>
+                                    </View>
+                                ) : currentAddress ? (
+                                    <Text style={styles.cardSubText} numberOfLines={2}>
+                                        {currentAddress}
+                                    </Text>
+                                ) : (
+                                    <Text style={styles.cardSubTextPlaceholder}>
+                                        Tap to detect your GPS location
+                                    </Text>
+                                )}
+                            </View>
 
-                        <View style={styles.cardTextWrapper}>
-                            <Text style={styles.cardTitle}>Use current location</Text>
-                            {isLocatingCurrent ? (
-                                <View style={styles.detectingRow}>
-                                    <ActivityIndicator size="small" color={COLORS.primary} style={{ marginRight: 6 }} />
-                                    <Text style={styles.cardSubText}>Detecting current location...</Text>
-                                </View>
-                            ) : currentAddress ? (
-                                <Text style={styles.cardSubText} numberOfLines={2}>
-                                    {currentAddress}
+                            <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
+                        </TouchableOpacity>
+
+                        {/* Divider */}
+                        <View style={styles.cardDivider} />
+
+                        {/* Option 2: Select Address on Google Map */}
+                        <TouchableOpacity
+                            style={styles.cardRow}
+                            onPress={handleSelectAddress}
+                            activeOpacity={0.7}
+                        >
+                            <View style={styles.iconCircle}>
+                                <Ionicons name="location" size={22} color={COLORS.primary} />
+                            </View>
+
+                            <View style={styles.cardTextWrapper}>
+                                <Text style={styles.cardTitle}>Select Address</Text>
+                                <Text style={styles.cardSubText} numberOfLines={1}>
+                                    Choose pickup location on Google Map
                                 </Text>
-                            ) : (
-                                <Text style={styles.cardSubTextPlaceholder}>
-                                    Tap to detect and use your GPS location
-                                </Text>
-                            )}
-                        </View>
+                            </View>
 
-                        <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
-                    </TouchableOpacity>
-
-                    {/* Divider */}
-                    <View style={styles.cardDivider} />
-
-                    {/* Option 2: Select Address on Google Map */}
-                    <TouchableOpacity
-                        style={styles.cardRow}
-                        onPress={handleSelectAddress}
-                        activeOpacity={0.7}
-                    >
-                        <View style={styles.iconCircle}>
-                            <Ionicons name="location" size={22} color={COLORS.primary} />
-                        </View>
-
-                        <View style={styles.cardTextWrapper}>
-                            <Text style={styles.cardTitle}>Select Address</Text>
-                            <Text style={styles.cardSubText} numberOfLines={1}>
-                                Choose pickup location on Google Map
-                            </Text>
-                        </View>
-
-                        <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
-                    </TouchableOpacity>
+                            <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </View>
-        </View>
-    );
+        );
     }
 
     // ==========================================
-    // 2. GOOGLE MAP INTERACTIVE SCREEN
+    // 2. INTERACTIVE GOOGLE MAP SCREEN
     // ==========================================
     return (
         <View style={styles.container}>
@@ -553,46 +589,49 @@ export default function Googlemaps() {
                 ref={mapRef}
                 style={StyleSheet.absoluteFillObject}
                 provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
-                region={region}
+                initialRegion={region}
                 onPress={handleMapPress}
+                onRegionChange={handleRegionChange}
                 onRegionChangeComplete={handleRegionChangeComplete}
                 showsUserLocation={true}
                 showsMyLocationButton={false}
-            >
-                <Marker
-                    key={`marker_${coordinate.latitude}_${coordinate.longitude}`}
-                    coordinate={coordinate}
-                    title="Pickup Location"
-                    description={address || 'Drag marker or tap to adjust'}
-                    draggable
-                    onDragEnd={handleMarkerDragEnd}
-                    tracksViewChanges={true}
-                >
-                    <View style={styles.markerContainer}>
-                        <Ionicons name="location" size={32} color={COLORS.primary} />
-                    </View>
-                </Marker>
-            </MapView>
+            />
 
-            {/* Top Floating Search Bar */}
+            {/* Fixed Center Pin Marker (Porter / Uber style) */}
+            <View style={styles.centerPinWrapper} pointerEvents="none">
+                <View style={[styles.centerPinContainer, isMovingMap && styles.centerPinLifting]}>
+                    <View style={styles.centerPinBadge}>
+                        <Text style={styles.centerPinBadgeText} numberOfLines={1}>
+                            {isMovingMap ? 'Move map to adjust' : 'Pickup Location'}
+                        </Text>
+                    </View>
+                    <Ionicons name="location" size={42} color={COLORS.primary} />
+                    <View style={styles.centerPinShadow} />
+                </View>
+            </View>
+
+            {/* Top Floating Places (New) Autocomplete Search */}
             <SafeAreaView edges={['top']} style={styles.topOverlay} pointerEvents="box-none">
                 <View style={styles.searchHeaderRow}>
                     <TouchableOpacity
                         style={styles.backButton}
-                        onPress={() => setShowMap(false)}
+                        onPress={() => {
+                            Keyboard.dismiss();
+                            setShowMap(false);
+                        }}
                         activeOpacity={0.7}
                     >
                         <Ionicons name="arrow-back" size={24} color="#1e293b" />
                     </TouchableOpacity>
 
                     <View style={styles.autocompleteWrapper}>
-                        <View style={styles.textInputContainer}>
+                        <View style={styles.searchBarContainer}>
                             <View style={styles.searchIconContainer}>
                                 <Ionicons name="search" size={20} color={COLORS.primary} />
                             </View>
                             <TextInput
-                                style={styles.textInput}
-                                placeholder="Search pickup address..."
+                                style={styles.searchInput}
+                                placeholder="Search address..."
                                 placeholderTextColor="#94a3b8"
                                 value={searchText}
                                 onChangeText={handleSearchTextChange}
@@ -614,24 +653,28 @@ export default function Googlemaps() {
                             ) : null}
                         </View>
 
+                        {/* Search Suggestions Dropdown */}
                         {predictions.length > 0 && (
                             <View style={styles.listView}>
                                 <FlatList
                                     data={predictions}
-                                    keyExtractor={(item, index) => item?.placePrediction?.placeId || item?.placeId || index.toString()}
+                                    keyExtractor={(item, index) => item?.placePrediction?.placeId || index.toString()}
                                     keyboardShouldPersistTaps="handled"
                                     renderItem={({ item }) => {
-                                        const prediction = item?.placePrediction || item;
-                                        const mainText = prediction?.structuredFormat?.mainText?.text || prediction?.text?.text || '';
-                                        const secondaryText = prediction?.structuredFormat?.secondaryText?.text || '';
+                                        const fullText = item?.placePrediction?.text?.text || '';
+                                        const firstComma = fullText.indexOf(',');
+                                        const mainText = firstComma > -1 ? fullText.slice(0, firstComma).trim() : fullText;
+                                        const subText = firstComma > -1 ? fullText.slice(firstComma + 1).trim() : '';
+
                                         return (
                                             <TouchableOpacity
                                                 style={styles.rowContainer}
-                                                onPress={() => handleSelectPrediction(prediction)}
+                                                onPress={() => handleSelectPrediction(item)}
+                                                activeOpacity={0.7}
                                             >
                                                 <Ionicons
                                                     name="location-outline"
-                                                    size={20}
+                                                    size={22}
                                                     color={COLORS.primary}
                                                     style={styles.rowIcon}
                                                 />
@@ -639,9 +682,9 @@ export default function Googlemaps() {
                                                     <Text style={styles.rowMainText} numberOfLines={1}>
                                                         {mainText}
                                                     </Text>
-                                                    {secondaryText ? (
+                                                    {subText ? (
                                                         <Text style={styles.rowSubText} numberOfLines={1}>
-                                                            {secondaryText}
+                                                            {subText}
                                                         </Text>
                                                     ) : null}
                                                 </View>
@@ -686,7 +729,7 @@ export default function Googlemaps() {
                                 </View>
                             ) : (
                                 <Text style={styles.addressText} numberOfLines={2}>
-                                    {address || 'Search address or tap map to set location'}
+                                    {address || 'Move map or search to set pickup location'}
                                 </Text>
                             )}
                             <Text style={styles.coordinates}>
@@ -791,12 +834,51 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#f8fafc',
     },
-    markerContainer: {
-        width: 44,
-        height: 44,
-        alignItems: 'center',
+
+    // Fixed Center Marker Pin Styles (Porter / Uber style)
+    centerPinWrapper: {
+        position: 'absolute',
+        top: 0,
+        bottom: 0,
+        left: 0,
+        right: 0,
         justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 20,
     },
+    centerPinContainer: {
+        alignItems: 'center',
+        marginBottom: 42,
+    },
+    centerPinLifting: {
+        transform: [{ translateY: -10 }],
+    },
+    centerPinBadge: {
+        backgroundColor: '#1e293b',
+        paddingHorizontal: 12,
+        paddingVertical: 5,
+        borderRadius: 14,
+        marginBottom: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3,
+        elevation: 4,
+    },
+    centerPinBadgeText: {
+        color: '#ffffff',
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    centerPinShadow: {
+        width: 10,
+        height: 6,
+        borderRadius: 5,
+        backgroundColor: 'rgba(0, 0, 0, 0.25)',
+        marginTop: -3,
+    },
+
+    // Top Floating Search Bar
     topOverlay: {
         position: 'absolute',
         top: 0,
@@ -829,7 +911,7 @@ const styles = StyleSheet.create({
         flex: 1,
         zIndex: 1000,
     },
-    textInputContainer: {
+    searchBarContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#fff',
@@ -844,17 +926,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#e2e8f0',
     },
-    searchIconContainer: {
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 6,
-    },
-    clearButton: {
-        padding: 4,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    textInput: {
+    searchInput: {
         flex: 1,
         height: 48,
         fontSize: 15,
@@ -862,8 +934,18 @@ const styles = StyleSheet.create({
         fontWeight: '500',
         backgroundColor: 'transparent',
         paddingVertical: 0,
-        paddingHorizontal: 4,
+        paddingHorizontal: 8,
         marginBottom: 0,
+    },
+    searchIconContainer: {
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 4,
+    },
+    clearButton: {
+        padding: 4,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     listView: {
         backgroundColor: '#fff',
@@ -904,6 +986,8 @@ const styles = StyleSheet.create({
         color: '#64748b',
         marginTop: 2,
     },
+
+    // Floating Current Location Button
     locateButton: {
         position: 'absolute',
         right: 16,
@@ -921,6 +1005,8 @@ const styles = StyleSheet.create({
         elevation: 6,
         zIndex: 50,
     },
+
+    // Bottom Confirmation Card
     bottomOverlay: {
         position: 'absolute',
         bottom: 0,

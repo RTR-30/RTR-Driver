@@ -6,6 +6,6 @@ export const referalHistoryService = async () => {
     return Get(`${ownBaseUrl}${referalApi.referal_history}`, 'rtrToken')
 }
 
-export const getUserDetailsService = () => {
-    return Get(`${baseUrl}${userData}`, "rtrToken")
+export const getUserDetailsService = async () => {
+    return await Get(`${baseUrl}${userData}`, "rtrToken")
 }
