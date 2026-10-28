@@ -54,7 +54,7 @@ export const Put = async (url: string, params: any = {}, attachToken: string = "
     }
 }
 
-export const Delete = async ( url: string, data: any = {}, attachToken: string = ""): Promise<any> => {
+export const Delete = async (url: string, data: any = {}, attachToken: string = ""): Promise<any> => {
     let headers = {};
 
     if (convertToLowerCase(attachToken) === convertToLowerCase("rtrToken")) {

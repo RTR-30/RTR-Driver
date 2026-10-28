@@ -11,6 +11,7 @@ import {
 
 import DeviceInfo from "react-native-device-info";
 import { COLORS } from "../../utils/ColorCode";
+import { showError } from "../ToastMessage";
 
 interface ForceUpdateProps {
     latestVersion?: string;
@@ -83,12 +84,7 @@ const ForceUpdate = ({
             setForceUpdate(isOldVersion);
 
         } catch (error) {
-
-            console.log(
-                "Version check error:",
-                error
-            );
-
+            showError("Version error")
             setForceUpdate(false);
 
         } finally {
@@ -106,10 +102,7 @@ const ForceUpdate = ({
         try {
             await Linking.openURL(storeUrl);
         } catch (error) {
-            console.log(
-                "Unable to open store:",
-                error
-            );
+            showError("Unable to open store")
         }
     };
 

@@ -12,6 +12,8 @@ import {
     FlatList,
     BackHandler,
     StatusBar,
+    Modal,
+    ScrollView,
 } from 'react-native';
 import MapView, { Region, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -23,6 +25,12 @@ import { Google_Key } from '../../../environment/ApiManager';
 import { COLORS } from '../../utils/ColorCode';
 import { showSuccess, showError } from '../ToastMessage';
 import Header from '../Header';
+import {
+    getAddressesService,
+    addAddressService,
+    deleteAddressService,
+    AddressPayload,
+} from './helper';
 
 const GOOGLE_API_KEY = Google_Key;
 
@@ -50,6 +58,10 @@ export default function Googlemaps() {
     // View state: false = "Select a location" screen (Porter style), true = Google Map screen
     const [showMap, setShowMap] = useState(false);
 
+    // Saved Addresses state (from /user/addresses)
+    const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
+    const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
+
     // Current GPS location state
     const [currentAddress, setCurrentAddress] = useState('');
     const [currentCoordinate, setCurrentCoordinate] = useState<Coordinate | null>(null);
@@ -66,12 +78,37 @@ export default function Googlemaps() {
     const [isReverseGeocoding, setIsReverseGeocoding] = useState(false);
     const [isMovingMap, setIsMovingMap] = useState(false);
 
+    // Extracted address details for saving
+    const [addressDetails, setAddressDetails] = useState({
+        city: '',
+        state: '',
+        pincode: '',
+        apartmentRoadArea: '',
+    });
+
+    // Save Address Modal Form state
+    const [isSaveModalVisible, setIsSaveModalVisible] = useState(false);
+    const [isSavingAddress, setIsSavingAddress] = useState(false);
+    const [editableAddress, setEditableAddress] = useState('');
+    const [tag, setTag] = useState<'HOME' | 'WORK' | 'OTHER'>('HOME');
+    const [houseFlatFloor, setHouseFlatFloor] = useState('');
+    const [apartmentRoadArea, setApartmentRoadArea] = useState('');
+    const [landmark, setLandmark] = useState('');
+    const [contactName, setContactName] = useState('');
+    const [contactPhone, setContactPhone] = useState('');
+    const [instructions, setInstructions] = useState('');
+    const [isDefault, setIsDefault] = useState(false);
+
     const searchTimeoutRef = useRef<any>(null);
     const regionChangeTimeoutRef = useRef<any>(null);
 
     // Handle Android hardware back button
     useEffect(() => {
         const backAction = () => {
+            if (isSaveModalVisible) {
+                setIsSaveModalVisible(false);
+                return true;
+            }
             if (showMap) {
                 Keyboard.dismiss();
                 setShowMap(false);
@@ -82,7 +119,7 @@ export default function Googlemaps() {
 
         const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
         return () => backHandler.remove();
-    }, [showMap]);
+    }, [showMap, isSaveModalVisible]);
 
     // Clean up timers on unmount
     useEffect(() => {
@@ -90,6 +127,29 @@ export default function Googlemaps() {
             if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
             if (regionChangeTimeoutRef.current) clearTimeout(regionChangeTimeoutRef.current);
         };
+    }, []);
+
+    // Fetch saved addresses from backend GET /user/addresses
+    const fetchSavedAddresses = async () => {
+        setIsLoadingAddresses(true);
+        try {
+            const res: any = await getAddressesService();
+            const data = res?.data?.data || res?.data?.addresses || res?.data;
+            if (Array.isArray(data)) {
+                setSavedAddresses(data);
+            } else {
+                setSavedAddresses([]);
+            }
+        } catch (error) {
+            console.warn('Error fetching addresses:', error);
+            setSavedAddresses([]);
+        } finally {
+            setIsLoadingAddresses(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchSavedAddresses();
     }, []);
 
     // Request location permission
@@ -146,7 +206,7 @@ export default function Googlemaps() {
                 headers: {
                     'Content-Type': 'application/json',
                     'X-Goog-Api-Key': GOOGLE_API_KEY,
-                    'X-Goog-FieldMask': 'places.displayName,places.formattedAddress',
+                    'X-Goog-FieldMask': 'places.displayName,places.formattedAddress,places.addressComponents',
                 },
                 body: JSON.stringify({
                     locationRestriction: {
@@ -162,6 +222,38 @@ export default function Googlemaps() {
             if (data?.places && data.places.length > 0) {
                 const place = data.places[0];
                 const resolved = place.formattedAddress || place.displayName?.text;
+
+                // Extract address components for saving
+                let city = '';
+                let state = '';
+                let pincode = '';
+                let area = '';
+
+                if (Array.isArray(place.addressComponents)) {
+                    place.addressComponents.forEach((comp: any) => {
+                        const types = comp.types || [];
+                        if (types.includes('locality')) {
+                            city = comp.longText || comp.shortText || '';
+                        }
+                        if (types.includes('administrative_area_level_1')) {
+                            state = comp.longText || comp.shortText || '';
+                        }
+                        if (types.includes('postal_code')) {
+                            pincode = comp.longText || comp.shortText || '';
+                        }
+                        if (types.includes('sublocality_level_1') || types.includes('neighborhood') || types.includes('route')) {
+                            if (!area) area = comp.longText || comp.shortText || '';
+                        }
+                    });
+                }
+
+                setAddressDetails({
+                    city,
+                    state,
+                    pincode,
+                    apartmentRoadArea: area,
+                });
+
                 if (resolved) {
                     return resolved;
                 }
@@ -241,11 +333,6 @@ export default function Googlemaps() {
         );
     };
 
-    // Auto-fetch GPS on initial screen load
-    useEffect(() => {
-        fetchCurrentLocation(false);
-    }, []);
-
     // Animate map camera to location when showMap becomes true
     useEffect(() => {
         if (showMap) {
@@ -296,16 +383,116 @@ export default function Googlemaps() {
 
     // User tapped "Use current location" on Screen 1
     const handleUseCurrentLocation = async () => {
-        if (currentAddress && currentCoordinate) {
-            navigateToTrip(currentAddress, currentCoordinate);
-        } else {
-            await fetchCurrentLocation(true);
-        }
+        await fetchCurrentLocation(true);
     };
 
     // User tapped "Select Address" on Screen 1
     const handleSelectAddress = () => {
         setShowMap(true);
+    };
+
+    // User taps a saved address from GET /user/addresses
+    const handleSelectSavedAddress = (item: any) => {
+        const fullAddress = item.formattedAddress || item.houseFlatFloor || 'Saved Address';
+        const lat = Number(item.latitude);
+        const lng = Number(item.longitude);
+
+        if (!isNaN(lat) && !isNaN(lng)) {
+            navigateToTrip(fullAddress, { latitude: lat, longitude: lng });
+        } else {
+            showError('Invalid coordinates in saved address.');
+        }
+    };
+
+    // User deletes a saved address via DELETE /user/addresses/:id
+    const handleDeleteSavedAddress = (id: string | number) => {
+        Alert.alert(
+            'Delete Address',
+            'Are you sure you want to delete this saved address?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            const res: any = await deleteAddressService(id);
+                            if (res?.data?.status !== false) {
+                                showSuccess('Address deleted successfully.');
+                                fetchSavedAddresses();
+                            } else {
+                                showError(res?.data?.message || 'Failed to delete address.');
+                            }
+                        } catch (error) {
+                            showError('Unable to delete address.');
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
+    // Open the Save Address Modal sheet
+    const handleOpenSaveModal = () => {
+        if (!address.trim()) {
+            showError('Please select a pickup address first.');
+            return;
+        }
+        setEditableAddress(address);
+        setApartmentRoadArea(addressDetails.apartmentRoadArea || '');
+        setIsSaveModalVisible(true);
+    };
+
+    // Submit new address using POST /user/addresses
+    const handleSaveAddressSubmit = async () => {
+        const finalAddress = (editableAddress || address).trim();
+        if (!finalAddress || !coordinate.latitude) {
+            showError('Invalid address or coordinates.');
+            return;
+        }
+
+        if (!houseFlatFloor.trim()) {
+            showError('Please enter House / Flat / Block No.');
+            return;
+        }
+
+        setIsSavingAddress(true);
+        try {
+            const payload: AddressPayload = {
+                tag: tag,
+                formattedAddress: finalAddress,
+                houseFlatFloor: houseFlatFloor.trim(),
+                apartmentRoadArea: apartmentRoadArea.trim() || addressDetails.apartmentRoadArea || undefined,
+                landmark: landmark.trim() || undefined,
+                city: addressDetails.city || 'Bengaluru',
+                state: addressDetails.state || 'Karnataka',
+                pincode: addressDetails.pincode || undefined,
+                latitude: coordinate.latitude,
+                longitude: coordinate.longitude,
+                contactName: contactName.trim() || undefined,
+                contactPhone: contactPhone.trim() || undefined,
+                instructions: instructions.trim() || undefined,
+                isDefault: isDefault,
+            };
+
+            const res: any = await addAddressService(payload);
+            const { status = true, message = '' } = res?.data || {};
+            
+            if (status !== false) {
+                showSuccess('Address saved successfully!');
+                setIsSaveModalVisible(false);
+                fetchSavedAddresses();
+                setAddress(finalAddress);
+                setSearchText(finalAddress);
+                navigateToTrip(finalAddress, coordinate);
+            } else {
+                showError(message || 'Failed to save address.');
+            }
+        } catch (error: any) {
+            showError(error?.message || 'Unable to save address.');
+        } finally {
+            setIsSavingAddress(false);
+        }
     };
 
     // Map region change in progress (user is actively panning/zooming)
@@ -373,6 +560,7 @@ export default function Googlemaps() {
                     longitudeDelta: 0.008,
                 };
 
+                setCurrentCoordinate(newCoordinate);
                 setCoordinate(newCoordinate);
                 setRegion(newRegion);
                 mapRef.current?.animateToRegion(newRegion, 800);
@@ -487,7 +675,7 @@ export default function Googlemaps() {
         }
     };
 
-    // Confirm pickup location and proceed
+    // Confirm pickup location directly without saving to /user/addresses
     const handleConfirmLocation = () => {
         if (!address.trim() && !coordinate.latitude) {
             showError('Please search or select a pickup address.');
@@ -495,6 +683,18 @@ export default function Googlemaps() {
         }
         Keyboard.dismiss();
         navigateToTrip(address, coordinate);
+    };
+
+    // Helper to get icon for saved address tag
+    const getTagIcon = (addressTag: string) => {
+        switch ((addressTag || '').toUpperCase()) {
+            case 'HOME':
+                return { name: 'home', bg: '#fee2e2', color: COLORS.primary };
+            case 'WORK':
+                return { name: 'briefcase', bg: '#e0e7ff', color: '#4f46e5' };
+            default:
+                return { name: 'location', bg: '#f1f5f9', color: '#64748b' };
+        }
     };
 
     // ==========================================
@@ -512,66 +712,155 @@ export default function Googlemaps() {
 
                 {/* Main Content Sheet */}
                 <View style={styles.contentSheet}>
-                    <View style={styles.cardContainer}>
-                        {/* Option 1: Use Current Location */}
-                        <TouchableOpacity
-                            style={styles.cardRow}
-                            onPress={handleUseCurrentLocation}
-                            activeOpacity={0.7}
-                            disabled={isLocatingCurrent}
-                        >
-                            <View style={styles.iconCircle}>
-                                <Ionicons name="locate" size={22} color={COLORS.primary} />
-                            </View>
+                    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
+                        {/* Primary Options Card */}
+                        <View style={styles.cardContainer}>
+                            {/* Option 1: Use Current Location */}
+                            <TouchableOpacity
+                                style={styles.cardRow}
+                                onPress={handleUseCurrentLocation}
+                                activeOpacity={0.7}
+                                disabled={isLocatingCurrent}
+                            >
+                                <View style={styles.iconCircle}>
+                                    <Ionicons name="locate" size={22} color={COLORS.primary} />
+                                </View>
 
-                            <View style={styles.cardTextWrapper}>
-                                <Text style={styles.cardTitle}>Use current location</Text>
-                                {isLocatingCurrent ? (
-                                    <View style={styles.detectingRow}>
-                                        <ActivityIndicator
-                                            size="small"
-                                            color={COLORS.primary}
-                                            style={{ marginRight: 6 }}
-                                        />
-                                        <Text style={styles.cardSubText}>Detecting current location...</Text>
-                                    </View>
-                                ) : currentAddress ? (
-                                    <Text style={styles.cardSubText} numberOfLines={2}>
-                                        {currentAddress}
+                                <View style={styles.cardTextWrapper}>
+                                    <Text style={styles.cardTitle}>Use current location</Text>
+                                    {isLocatingCurrent ? (
+                                        <View style={styles.detectingRow}>
+                                            <ActivityIndicator
+                                                size="small"
+                                                color={COLORS.primary}
+                                                style={{ marginRight: 6 }}
+                                            />
+                                            <Text style={styles.cardSubText}>Detecting current location...</Text>
+                                        </View>
+                                    ) : currentAddress ? (
+                                        <Text style={styles.cardSubText} numberOfLines={2}>
+                                            {currentAddress}
+                                        </Text>
+                                    ) : (
+                                        <Text style={styles.cardSubTextPlaceholder}>
+                                            Tap to detect your GPS location
+                                        </Text>
+                                    )}
+                                </View>
+
+                                <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
+                            </TouchableOpacity>
+
+                            {/* Divider */}
+                            <View style={styles.cardDivider} />
+
+                            {/* Option 2: Select Address on Google Map */}
+                            <TouchableOpacity
+                                style={styles.cardRow}
+                                onPress={handleSelectAddress}
+                                activeOpacity={0.7}
+                            >
+                                <View style={styles.iconCircle}>
+                                    <Ionicons name="location" size={22} color={COLORS.primary} />
+                                </View>
+
+                                <View style={styles.cardTextWrapper}>
+                                    <Text style={styles.cardTitle}>Select Address</Text>
+                                    <Text style={styles.cardSubText} numberOfLines={1}>
+                                        Choose pickup location on Google Map
                                     </Text>
-                                ) : (
-                                    <Text style={styles.cardSubTextPlaceholder}>
-                                        Tap to detect your GPS location
-                                    </Text>
-                                )}
+                                </View>
+
+                                <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Saved Addresses Section (from GET /user/addresses) */}
+                        <View style={styles.sectionHeaderRow}>
+                            <Text style={styles.sectionTitle}>SAVED ADDRESSES</Text>
+                            <TouchableOpacity
+                                onPress={fetchSavedAddresses}
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            >
+                                <Ionicons name="refresh" size={18} color="#64748b" />
+                            </TouchableOpacity>
+                        </View>
+
+                        {isLoadingAddresses ? (
+                            <View style={styles.loadingAddressesBox}>
+                                <ActivityIndicator size="small" color={COLORS.primary} />
+                                <Text style={styles.loadingAddressesText}>Loading saved addresses...</Text>
                             </View>
+                        ) : savedAddresses.length > 0 ? (
+                            <View style={styles.cardContainer}>
+                                {savedAddresses.map((item: any, index: number) => {
+                                    const iconInfo = getTagIcon(item.tag);
+                                    const title = item.tag || 'SAVED ADDRESS';
+                                    const subAddress = item.formattedAddress || item.houseFlatFloor || '';
+                                    const detailLine = [item.houseFlatFloor, item.apartmentRoadArea, item.landmark]
+                                        .filter(Boolean)
+                                        .join(', ');
 
-                            <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
-                        </TouchableOpacity>
+                                    return (
+                                        <View key={item.id || item._id || index}>
+                                            <TouchableOpacity
+                                                style={styles.cardRow}
+                                                onPress={() => handleSelectSavedAddress(item)}
+                                                activeOpacity={0.7}
+                                            >
+                                                <View style={[styles.iconCircle, { backgroundColor: iconInfo.bg }]}>
+                                                    <Ionicons name={iconInfo.name as any} size={20} color={iconInfo.color} />
+                                                </View>
 
-                        {/* Divider */}
-                        <View style={styles.cardDivider} />
+                                                <View style={styles.cardTextWrapper}>
+                                                    <View style={styles.tagTitleRow}>
+                                                        <Text style={styles.cardTitle}>{title}</Text>
+                                                        {item.isDefault ? (
+                                                            <View style={styles.defaultBadge}>
+                                                                <Text style={styles.defaultBadgeText}>DEFAULT</Text>
+                                                            </View>
+                                                        ) : null}
+                                                    </View>
 
-                        {/* Option 2: Select Address on Google Map */}
-                        <TouchableOpacity
-                            style={styles.cardRow}
-                            onPress={handleSelectAddress}
-                            activeOpacity={0.7}
-                        >
-                            <View style={styles.iconCircle}>
-                                <Ionicons name="location" size={22} color={COLORS.primary} />
+                                                    {detailLine ? (
+                                                        <Text style={styles.savedDetailText} numberOfLines={1}>
+                                                            {detailLine}
+                                                        </Text>
+                                                    ) : null}
+
+                                                    <Text style={styles.cardSubText} numberOfLines={2}>
+                                                        {subAddress}
+                                                    </Text>
+                                                </View>
+
+                                                <TouchableOpacity
+                                                    style={styles.deleteButton}
+                                                    onPress={() => handleDeleteSavedAddress(item.id || item._id)}
+                                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                                >
+                                                    <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                                                </TouchableOpacity>
+                                            </TouchableOpacity>
+
+                                            {index < savedAddresses.length - 1 && (
+                                                <View style={styles.cardDivider} />
+                                            )}
+                                        </View>
+                                    );
+                                })}
                             </View>
-
-                            <View style={styles.cardTextWrapper}>
-                                <Text style={styles.cardTitle}>Select Address</Text>
-                                <Text style={styles.cardSubText} numberOfLines={1}>
-                                    Choose pickup location on Google Map
+                        ) : (
+                            <View style={styles.emptySavedBox}>
+                                <View style={styles.emptyIconCircle}>
+                                    <Ionicons name="bookmark-outline" size={26} color="#94a3b8" />
+                                </View>
+                                <Text style={styles.emptySavedTitle}>No saved addresses yet</Text>
+                                <Text style={styles.emptySavedSubtitle}>
+                                    Pick a location on the map and tap "Save Address" to quickly book trips in the future.
                                 </Text>
                             </View>
-
-                            <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
-                        </TouchableOpacity>
-                    </View>
+                        )}
+                    </ScrollView>
                 </View>
             </View>
         );
@@ -593,7 +882,7 @@ export default function Googlemaps() {
                 onPress={handleMapPress}
                 onRegionChange={handleRegionChange}
                 onRegionChangeComplete={handleRegionChangeComplete}
-                showsUserLocation={true}
+                showsUserLocation={!!currentCoordinate}
                 showsMyLocationButton={false}
             />
 
@@ -713,7 +1002,7 @@ export default function Googlemaps() {
                 )}
             </TouchableOpacity>
 
-            {/* Bottom Card for Location Confirmation */}
+            {/* Bottom Card for Location Confirmation & Save */}
             <SafeAreaView edges={['bottom']} style={styles.bottomOverlay} pointerEvents="box-none">
                 <View style={styles.bottomCard}>
                     <View style={styles.bottomCardContent}>
@@ -738,15 +1027,207 @@ export default function Googlemaps() {
                         </View>
                     </View>
 
-                    <TouchableOpacity
-                        style={styles.confirmButton}
-                        onPress={handleConfirmLocation}
-                        activeOpacity={0.8}
-                    >
-                        <Text style={styles.confirmButtonText}>Confirm Pickup Location</Text>
-                    </TouchableOpacity>
+                    <View style={styles.bottomButtonsRow}>
+                        <TouchableOpacity
+                            style={styles.saveOutlineButton}
+                            onPress={handleOpenSaveModal}
+                            activeOpacity={0.8}
+                        >
+                            <Ionicons name="bookmark-outline" size={18} color={COLORS.primary} style={{ marginRight: 6 }} />
+                            <Text style={styles.saveOutlineButtonText}>Save Address</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.confirmButton}
+                            onPress={handleConfirmLocation}
+                            activeOpacity={0.8}
+                        >
+                            <Text style={styles.confirmButtonText}>Confirm Pickup</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </SafeAreaView>
+
+            {/* Save Address Details Modal (POST /user/addresses) */}
+            <Modal
+                visible={isSaveModalVisible}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setIsSaveModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        {/* Modal Header */}
+                        <View style={styles.modalHeader}>
+                            <View>
+                                <Text style={styles.modalTitle}>Save Address Details</Text>
+                                <Text style={styles.modalSubtitle}>Save to your address book for fast booking</Text>
+                            </View>
+                            <TouchableOpacity
+                                style={styles.modalCloseButton}
+                                onPress={() => setIsSaveModalVisible(false)}
+                            >
+                                <Ionicons name="close" size={22} color="#475569" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 420 }}>
+                            {/* Tag Selection: HOME / WORK / OTHER */}
+                            <Text style={styles.fieldLabel}>SAVE AS *</Text>
+                            <View style={styles.tagSelectorRow}>
+                                {(['HOME', 'WORK', 'OTHER'] as const).map((item) => {
+                                    const isSelected = tag === item;
+                                    const iconName = item === 'HOME' ? 'home' : item === 'WORK' ? 'briefcase' : 'location';
+                                    return (
+                                        <TouchableOpacity
+                                            key={item}
+                                            style={[styles.tagButton, isSelected && styles.tagButtonSelected]}
+                                            onPress={() => setTag(item)}
+                                            activeOpacity={0.8}
+                                        >
+                                            <Ionicons
+                                                name={iconName as any}
+                                                size={16}
+                                                color={isSelected ? '#fff' : '#64748b'}
+                                                style={{ marginRight: 6 }}
+                                            />
+                                            <Text style={[styles.tagButtonText, isSelected && styles.tagButtonTextSelected]}>
+                                                {item}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </View>
+
+                            {/* Formatted Address (Editable) */}
+                            <Text style={styles.fieldLabel}>SELECTED ADDRESS *</Text>
+                            <View style={styles.addressEditableBox}>
+                                <Ionicons
+                                    name="location"
+                                    size={18}
+                                    color={COLORS.primary}
+                                    style={{ marginRight: 8, marginTop: Platform.OS === 'ios' ? 2 : 4 }}
+                                />
+                                <TextInput
+                                    style={styles.addressEditableInput}
+                                    multiline
+                                    placeholder="Enter or edit address..."
+                                    placeholderTextColor="#94a3b8"
+                                    value={editableAddress}
+                                    onChangeText={setEditableAddress}
+                                />
+                            </View>
+
+                            {/* House / Flat / Floor */}
+                            <Text style={styles.fieldLabel}>
+                                HOUSE / FLAT / BLOCK NO. <Text style={styles.requiredAsterisk}>*</Text>
+                            </Text>
+                            <TextInput
+                                style={styles.modalInput}
+                                placeholder="e.g. Flat 402, Block B"
+                                placeholderTextColor="#94a3b8"
+                                value={houseFlatFloor}
+                                onChangeText={setHouseFlatFloor}
+                            />
+
+                            {/* Apartment / Road / Area */}
+                            <Text style={styles.fieldLabel}>APARTMENT / ROAD / AREA (OPTIONAL)</Text>
+                            <TextInput
+                                style={styles.modalInput}
+                                placeholder="e.g. Sobha Iris, Outer Ring Road"
+                                placeholderTextColor="#94a3b8"
+                                value={apartmentRoadArea}
+                                onChangeText={setApartmentRoadArea}
+                            />
+
+                            {/* Landmark */}
+                            <Text style={styles.fieldLabel}>LANDMARK (OPTIONAL)</Text>
+                            <TextInput
+                                style={styles.modalInput}
+                                placeholder="e.g. Opposite Sakra Hospital"
+                                placeholderTextColor="#94a3b8"
+                                value={landmark}
+                                onChangeText={setLandmark}
+                            />
+
+                            {/* Contact Details */}
+                            <View style={styles.splitRow}>
+                                <View style={{ flex: 1, marginRight: 8 }}>
+                                    <Text style={styles.fieldLabel}>CONTACT NAME</Text>
+                                    <TextInput
+                                        style={styles.modalInput}
+                                        placeholder="e.g. Rahul Sharma"
+                                        placeholderTextColor="#94a3b8"
+                                        value={contactName}
+                                        onChangeText={setContactName}
+                                    />
+                                </View>
+                                <View style={{ flex: 1, marginLeft: 8 }}>
+                                    <Text style={styles.fieldLabel}>CONTACT PHONE</Text>
+                                    <TextInput
+                                        style={styles.modalInput}
+                                        placeholder="e.g. 9876543210"
+                                        placeholderTextColor="#94a3b8"
+                                        keyboardType="phone-pad"
+                                        value={contactPhone}
+                                        onChangeText={setContactPhone}
+                                    />
+                                </View>
+                            </View>
+
+                            {/* Instructions */}
+                            <Text style={styles.fieldLabel}>INSTRUCTIONS (OPTIONAL)</Text>
+                            <TextInput
+                                style={styles.modalInput}
+                                placeholder="e.g. Call on arrival"
+                                placeholderTextColor="#94a3b8"
+                                value={instructions}
+                                onChangeText={setInstructions}
+                            />
+
+                            {/* Set Default Address Checkbox */}
+                            <TouchableOpacity
+                                style={styles.checkboxRow}
+                                onPress={() => setIsDefault(!isDefault)}
+                                activeOpacity={0.8}
+                            >
+                                <Ionicons
+                                    name={isDefault ? 'checkbox' : 'square-outline'}
+                                    size={20}
+                                    color={isDefault ? COLORS.primary : '#94a3b8'}
+                                />
+                                <Text style={styles.checkboxLabel}>Set as default pickup address</Text>
+                            </TouchableOpacity>
+                        </ScrollView>
+
+                        {/* Modal Action Buttons */}
+                        <View style={styles.modalActionsRow}>
+                            <TouchableOpacity
+                                style={styles.modalCancelBtn}
+                                onPress={() => setIsSaveModalVisible(false)}
+                                disabled={isSavingAddress}
+                            >
+                                <Text style={styles.modalCancelBtnText}>Cancel</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[
+                                    styles.modalSaveBtn,
+                                    !houseFlatFloor.trim() && styles.modalSaveBtnDisabled,
+                                ]}
+                                onPress={handleSaveAddressSubmit}
+                                disabled={isSavingAddress}
+                            >
+                                {isSavingAddress ? (
+                                    <ActivityIndicator size="small" color="#fff" />
+                                ) : (
+                                    <Text style={styles.modalSaveBtnText}>Save & Proceed</Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -776,7 +1257,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#ffffff',
         borderRadius: 16,
         marginHorizontal: 16,
-        marginTop: 16,
+        marginTop: 10,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.06,
@@ -827,6 +1308,87 @@ const styles = StyleSheet.create({
         height: 1,
         backgroundColor: '#f1f5f9',
         marginHorizontal: 16,
+    },
+
+    // Saved Addresses Section Styles
+    sectionHeaderRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginHorizontal: 18,
+        marginTop: 22,
+        marginBottom: 6,
+    },
+    sectionTitle: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#64748b',
+        letterSpacing: 0.8,
+    },
+    loadingAddressesBox: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 24,
+    },
+    loadingAddressesText: {
+        marginLeft: 8,
+        fontSize: 13,
+        color: '#64748b',
+    },
+    tagTitleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    defaultBadge: {
+        backgroundColor: '#dcfce7',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 6,
+        marginLeft: 8,
+    },
+    defaultBadgeText: {
+        fontSize: 10,
+        fontWeight: '700',
+        color: '#15803d',
+    },
+    savedDetailText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#1e293b',
+        marginBottom: 2,
+    },
+    deleteButton: {
+        padding: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    emptySavedBox: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 32,
+        paddingVertical: 32,
+    },
+    emptyIconCircle: {
+        width: 52,
+        height: 52,
+        borderRadius: 26,
+        backgroundColor: '#f1f5f9',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    emptySavedTitle: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#475569',
+        marginBottom: 4,
+    },
+    emptySavedSubtitle: {
+        fontSize: 12,
+        color: '#94a3b8',
+        textAlign: 'center',
+        lineHeight: 17,
     },
 
     // Map Screen Styles
@@ -991,7 +1553,7 @@ const styles = StyleSheet.create({
     locateButton: {
         position: 'absolute',
         right: 16,
-        bottom: 210,
+        bottom: 220,
         width: 50,
         height: 50,
         borderRadius: 25,
@@ -1068,7 +1630,30 @@ const styles = StyleSheet.create({
         color: '#94a3b8',
         marginTop: 4,
     },
+    bottomButtonsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    saveOutlineButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 14,
+        height: 50,
+        paddingHorizontal: 14,
+        borderWidth: 1.5,
+        borderColor: COLORS.primary,
+        backgroundColor: '#fff',
+        marginRight: 10,
+    },
+    saveOutlineButtonText: {
+        color: COLORS.primary,
+        fontSize: 14,
+        fontWeight: '700',
+    },
     confirmButton: {
+        flex: 1,
         backgroundColor: COLORS.primary,
         borderRadius: 14,
         height: 50,
@@ -1083,6 +1668,174 @@ const styles = StyleSheet.create({
     confirmButtonText: {
         color: '#fff',
         fontSize: 16,
+        fontWeight: '700',
+    },
+
+    // Save Address Modal Styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.55)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        backgroundColor: '#ffffff',
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        paddingHorizontal: 20,
+        paddingTop: 18,
+        paddingBottom: Platform.OS === 'ios' ? 36 : 24,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -3 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 12,
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: 16,
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#1e293b',
+    },
+    modalSubtitle: {
+        fontSize: 12,
+        color: '#64748b',
+        marginTop: 2,
+    },
+    modalCloseButton: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#f1f5f9',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    fieldLabel: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: '#64748b',
+        letterSpacing: 0.6,
+        marginBottom: 6,
+        marginTop: 10,
+    },
+    tagSelectorRow: {
+        flexDirection: 'row',
+        marginBottom: 8,
+    },
+    tagButton: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: 40,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+        backgroundColor: '#f8fafc',
+        marginHorizontal: 4,
+    },
+    tagButtonSelected: {
+        backgroundColor: COLORS.primary,
+        borderColor: COLORS.primary,
+    },
+    tagButtonText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#64748b',
+    },
+    tagButtonTextSelected: {
+        color: '#ffffff',
+    },
+    addressEditableBox: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        backgroundColor: '#fff',
+        borderWidth: 1,
+        borderColor: '#cbd5e1',
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        minHeight: 56,
+        marginBottom: 4,
+    },
+    addressEditableInput: {
+        flex: 1,
+        fontSize: 13,
+        color: '#1e293b',
+        lineHeight: 18,
+        paddingTop: 0,
+        paddingBottom: 0,
+        textAlignVertical: 'top',
+    },
+    modalInput: {
+        backgroundColor: '#fff',
+        borderWidth: 1,
+        borderColor: '#cbd5e1',
+        borderRadius: 12,
+        height: 46,
+        paddingHorizontal: 12,
+        fontSize: 14,
+        color: '#1e293b',
+    },
+    splitRow: {
+        flexDirection: 'row',
+    },
+    checkboxRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 14,
+        marginBottom: 8,
+    },
+    checkboxLabel: {
+        marginLeft: 8,
+        fontSize: 13,
+        fontWeight: '500',
+        color: '#334155',
+    },
+    modalActionsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 16,
+    },
+    modalCancelBtn: {
+        flex: 1,
+        height: 48,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#cbd5e1',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 8,
+    },
+    modalCancelBtnText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#475569',
+    },
+    modalSaveBtn: {
+        flex: 2,
+        height: 48,
+        borderRadius: 12,
+        backgroundColor: COLORS.primary,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginLeft: 8,
+    },
+    modalSaveBtnDisabled: {
+        opacity: 0.55,
+    },
+    modalSaveBtnText: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#ffffff',
+    },
+    requiredAsterisk: {
+        color: '#ef4444',
+        fontSize: 13,
         fontWeight: '700',
     },
 });

@@ -187,9 +187,8 @@ const Login = () => {
                             Email Address
                         </Text>
                         <View
-                            className={`flex-row items-center bg-slate-50 border rounded-xl px-3 h-12 ${
-                                errEmail ? "border-red-400 bg-red-50/20" : "border-slate-200"
-                            }`}
+                            className={`flex-row items-center bg-slate-50 border rounded-xl px-3 h-12 ${errEmail ? "border-red-400 bg-red-50/20" : "border-slate-200"
+                                }`}
                         >
                             <Ionicons
                                 name="mail-outline"
@@ -223,9 +222,8 @@ const Login = () => {
                             Password
                         </Text>
                         <View
-                            className={`flex-row items-center bg-slate-50 border rounded-xl px-3 h-12 ${
-                                errPassword ? "border-red-400 bg-red-50/20" : "border-slate-200"
-                            }`}
+                            className={`flex-row items-center bg-slate-50 border rounded-xl px-3 h-12 ${errPassword ? "border-red-400 bg-red-50/20" : "border-slate-200"
+                                }`}
                         >
                             <Ionicons
                                 name="lock-closed-outline"
