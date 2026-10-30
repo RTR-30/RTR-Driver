@@ -8,6 +8,7 @@ import {
     StyleSheet,
     StatusBar,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Header from "../../../../Common/Header/index";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { tripTypeService } from "./helpder";
@@ -167,7 +168,7 @@ const TripScreen = () => {
     };
 
     return (
-        <View style={styles.rootContainer}>
+        <SafeAreaView style={styles.rootContainer} edges={['top']}>
             <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
 
             {/* Screen Header */}
@@ -182,7 +183,7 @@ const TripScreen = () => {
             )}
 
             {/* Main Content Area */}
-            <View style={styles.contentContainer}>
+            <SafeAreaView edges={['bottom']} style={styles.contentContainer}>
                 <FlatList
                     data={triptypes}
                     keyExtractor={(item: any) => item.id.toString()}
@@ -200,8 +201,8 @@ const TripScreen = () => {
                         />
                     }
                 />
-            </View>
-        </View>
+            </SafeAreaView>
+        </SafeAreaView>
     );
 };
 

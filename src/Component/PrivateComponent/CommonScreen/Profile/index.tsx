@@ -7,12 +7,12 @@ import {
   View,
   Text,
   TouchableOpacity,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   Modal,
   TouchableWithoutFeedback,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import ImageCropPicker from "react-native-image-crop-picker";
@@ -160,7 +160,7 @@ const ProfileScreen = () => {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#E0211F]">
+    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.primary }} edges={['top']} className="flex-1 bg-[#E0211F]">
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
 
       {showLoading && <Loader />}
@@ -233,7 +233,7 @@ const ProfileScreen = () => {
       </View>
 
       {/* Main Content Curved Sheet */}
-      <View className="flex-1 bg-slate-50 rounded-t-[32px] overflow-hidden shadow-2xl">
+      <SafeAreaView edges={['bottom']} style={{ flex: 1, backgroundColor: '#f8fafc' }} className="flex-1 bg-slate-50 rounded-t-[32px] overflow-hidden shadow-2xl">
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           className="flex-1"
@@ -489,7 +489,7 @@ const ProfileScreen = () => {
             )}
           </ScrollView>
         </KeyboardAvoidingView>
-      </View>
+      </SafeAreaView>
 
       {/* Photo Picker Modal Sheet */}
       <Modal

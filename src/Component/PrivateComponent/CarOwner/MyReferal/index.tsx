@@ -5,11 +5,11 @@ import {
     Text,
     TouchableOpacity,
     View,
-    SafeAreaView,
     StatusBar,
     Share,
     RefreshControl,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Clipboard from "@react-native-clipboard/clipboard";
 import Ionicons from "react-native-vector-icons/Ionicons";
@@ -343,7 +343,7 @@ const MyReferal = () => {
     };
 
     return (
-        <SafeAreaView className="flex-1 bg-[#E0211F]">
+        <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.primary }} edges={['top']} className="flex-1 bg-[#E0211F]">
             <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
 
             {loading && <Loader />}
@@ -354,7 +354,7 @@ const MyReferal = () => {
             </View>
 
             {/* Content Sheet */}
-            <View className="flex-1 bg-slate-50 rounded-t-[28px] overflow-hidden">
+            <SafeAreaView edges={['bottom']} style={{ flex: 1, backgroundColor: '#f8fafc' }} className="flex-1 bg-slate-50 rounded-t-[28px] overflow-hidden">
                 <FlatList
                     data={referalHistory || []}
                     keyExtractor={(item, index) => item.id?.toString() || index.toString()}
@@ -377,7 +377,7 @@ const MyReferal = () => {
                         />
                     }
                 />
-            </View>
+            </SafeAreaView>
         </SafeAreaView>
     );
 };

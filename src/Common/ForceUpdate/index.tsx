@@ -166,7 +166,7 @@ const ForceUpdate = ({
 const styles = StyleSheet.create({
 
     loadingContainer: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
         backgroundColor: "#fff",
         justifyContent: "center",
         alignItems: "center",
@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
     },
 
     container: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
         backgroundColor: "#fff",
         justifyContent: "center",
         alignItems: "center",

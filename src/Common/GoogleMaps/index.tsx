@@ -702,7 +702,7 @@ export default function Googlemaps() {
     // ==========================================
     if (!showMap) {
         return (
-            <View style={styles.screenContainer}>
+            <SafeAreaView style={styles.screenContainer} edges={['top']}>
                 <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
 
                 {/* Header */}
@@ -711,7 +711,7 @@ export default function Googlemaps() {
                 </View>
 
                 {/* Main Content Sheet */}
-                <View style={styles.contentSheet}>
+                <SafeAreaView edges={['bottom']} style={styles.contentSheet}>
                     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
                         {/* Primary Options Card */}
                         <View style={styles.cardContainer}>
@@ -861,8 +861,8 @@ export default function Googlemaps() {
                             </View>
                         )}
                     </ScrollView>
-                </View>
-            </View>
+                </SafeAreaView>
+            </SafeAreaView>
         );
     }
 
@@ -876,7 +876,7 @@ export default function Googlemaps() {
             {/* Map View */}
             <MapView
                 ref={mapRef}
-                style={StyleSheet.absoluteFillObject}
+                style={StyleSheet.absoluteFill}
                 provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
                 initialRegion={region}
                 onPress={handleMapPress}

@@ -9,6 +9,7 @@ import {
     StatusBar,
     RefreshControl,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Header from "../../../../Common/Header";
 import { FetchBookingList } from "./helper";
 import RenderBookingList from "./renderBookingList";
@@ -105,7 +106,7 @@ const BookingList = () => {
     }, []);
 
     return (
-        <View style={styles.rootContainer}>
+        <SafeAreaView style={styles.rootContainer} edges={['top']}>
             <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
 
             {showLoading && (
@@ -120,7 +121,7 @@ const BookingList = () => {
             </View>
 
             {/* Main Content Area */}
-            <View style={styles.contentContainer}>
+            <SafeAreaView edges={['bottom']} style={styles.contentContainer}>
                 <FlatList
                     data={listData}
                     renderItem={({ item }) => <RenderBookingList item={item} onRefresh={onRefresh} />}
@@ -141,8 +142,8 @@ const BookingList = () => {
                     onEndReached={loadMore}
                     onEndReachedThreshold={0.3}
                 />
-            </View>
-        </View>
+            </SafeAreaView>
+        </SafeAreaView>
     );
 };
 

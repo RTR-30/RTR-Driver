@@ -9,6 +9,12 @@ export const paymentBaseUrl = `${ownBaseUrl}payment/`;
 export const forgetBaseUrl = `${ownBaseUrl}forget/`;
 export const deviceBaseUrl = `${ownBaseUrl}user_devices/`;
 export const FeedBackBaseUrl = `${ownBaseUrl}feedback`;
+export const contentBaseUrl = `${ownBaseUrl}content/`;
+
+export const contentApis = {
+    contactUsByAppType: (appType: string = "user") => `contact-us?appType=${appType}`,
+    termsByAppType: (appType: string = "user") => `terms?appType=${appType}`,
+};
 
 export const loginUrl = "login";
 export const signUp = "createUser";

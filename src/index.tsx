@@ -14,10 +14,10 @@ const InitialPage = () => {
     const navigation: any = useNavigation();
 
     const fetchUserData = async () => {
-        
+
         try {
             const storedUserData: any = await AsyncStorage.getItem("UserData");
-            
+
             if (storedUserData) {
                 navigation.navigate("OwnerHome")
             } else {

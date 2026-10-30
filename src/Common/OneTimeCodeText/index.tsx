@@ -19,7 +19,7 @@ const animateCell = ({ hasValue, index, isFocused }:any) => {
             toValue: isFocused ? 1 : 0,
             duration: 250,
         }),
-        Animated.spring(animationsScale[index], {
+        Animated.timing(animationsScale[index], {
             useNativeDriver: false,
             toValue: hasValue ? 0 : 1,
             duration: hasValue ? 300 : 250,

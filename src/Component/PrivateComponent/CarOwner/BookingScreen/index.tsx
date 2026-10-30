@@ -13,6 +13,7 @@ import {
     StyleSheet,
     Platform,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Header from "../../../../Common/Header/index";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import DateTimePicker from "react-native-modal-datetime-picker";
@@ -227,7 +228,7 @@ const BookingScreen = () => {
 
     return (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <View style={styles.rootContainer}>
+            <SafeAreaView style={styles.rootContainer} edges={['top']}>
                 <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
 
                 {/* Top Header */}
@@ -242,7 +243,7 @@ const BookingScreen = () => {
                 )}
 
                 {/* Main Content Area */}
-                <View style={styles.contentContainer}>
+                <SafeAreaView edges={['bottom']} style={styles.contentContainer}>
                     <ScrollView
                         contentContainerStyle={styles.scrollContent}
                         showsVerticalScrollIndicator={false}
@@ -573,8 +574,8 @@ const BookingScreen = () => {
                         handleBooking={handleBooking}
                         TripDetails={selectedTrip}
                     />
-                </View>
-            </View>
+                </SafeAreaView>
+            </SafeAreaView>
         </TouchableWithoutFeedback>
     );
 };

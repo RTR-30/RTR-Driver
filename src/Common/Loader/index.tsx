@@ -26,6 +26,7 @@ const styles = StyleSheet.create({
         backgroundColor: "rgba(0, 0, 0, 0.45)",
         zIndex: 99999,
         elevation: 99999,
+        flex:1
     },
     spinnerContainer: {
         width: 72,

@@ -5,13 +5,13 @@ import {
     Text,
     TouchableOpacity,
     Image,
-    SafeAreaView,
     StatusBar,
     FlatList,
     useWindowDimensions,
     Platform,
     StyleSheet,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { COLORS } from "../../../utils/ColorCode";
@@ -229,7 +229,7 @@ const OnboardingScreen: React.FC = () => {
     };
 
     return (
-        <SafeAreaView className="flex-1 bg-white">
+        <SafeAreaView style={{ flex: 1, backgroundColor: "#ffffff" }} edges={['top', 'bottom', 'left', 'right']} className="flex-1 bg-white">
             <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
             {/* Top Navigation Bar */}

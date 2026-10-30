@@ -2,7 +2,8 @@
 
 import NavigationPage from "./src/AuthComponent/index";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import {OneSignal, LogLevel} from 'react-native-onesignal';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { OneSignal, LogLevel } from 'react-native-onesignal';
 import { AppID } from "./environment/ApiManager";
 import { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -22,18 +23,18 @@ const App = () => {
     }
   };
 
-  useEffect(()=>{
+  useEffect(() => {
     fetchUserId();
   }, []);
-  
+
   return (
-    <>
+    <SafeAreaProvider>
       {UserId ? (
         <GestureHandlerRootView style={{ flex: 1 }}>
-            <NavigationPage />
+          <NavigationPage />
         </GestureHandlerRootView>
       ) : null}
-    </>
+    </SafeAreaProvider>
   )
 }
 

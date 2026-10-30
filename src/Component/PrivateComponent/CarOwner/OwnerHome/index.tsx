@@ -3,12 +3,12 @@ import React, { useEffect, useState } from "react";
 import {
     View,
     Text,
-    SafeAreaView,
     StatusBar,
     Image,
     TouchableOpacity,
     Platform,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Entypo from "react-native-vector-icons/Entypo";
 import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
 import DeviceInfo from "react-native-device-info";
@@ -55,7 +55,7 @@ const OwnerHome = () => {
     }, []);
 
     return (
-        <SafeAreaView className="flex-1 bg-[#E0211F]">
+        <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.primary }} edges={['top']} className="flex-1 bg-[#E0211F]">
             <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
 
             <View className="flex-1">
@@ -83,7 +83,7 @@ const OwnerHome = () => {
                 </View>
 
                 {/* Content Area */}
-                <View className="flex-1 bg-slate-50 rounded-t-[28px] overflow-hidden justify-between p-4">
+                <SafeAreaView edges={['bottom']} style={{ flex: 1, backgroundColor: '#f8fafc' }} className="flex-1 bg-slate-50 rounded-t-[28px] overflow-hidden justify-between p-4">
                     <View className="flex-row w-full justify-around mt-4">
                         <TouchableOpacity
                             onPress={() => navigation.navigate("Googlemaps")}
@@ -110,7 +110,7 @@ const OwnerHome = () => {
                     <View className="items-center pb-2">
                         <Text className="text-[12px] font-bold text-slate-400">v - {appVersion}</Text>
                     </View>
-                </View>
+                </SafeAreaView>
             </View>
 
             <ForceUpdate

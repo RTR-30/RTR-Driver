@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import {
     View,
     Text,
-    SafeAreaView,
     StatusBar,
     Image,
     TextInput,
@@ -10,6 +9,7 @@ import {
     ScrollView,
     Platform,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -132,7 +132,7 @@ const Login = () => {
     }, []);
 
     return (
-        <SafeAreaView className="flex-1 bg-slate-50">
+        <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }} edges={['top', 'bottom', 'left', 'right']} className="flex-1 bg-slate-50">
             <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
 
             {showLoader && <Loader />}

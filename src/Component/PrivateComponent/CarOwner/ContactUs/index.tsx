@@ -9,6 +9,7 @@ import {
     StatusBar,
     Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import Header from "../../../../Common/Header/index";
 import Loader from "../../../../Common/Loader";
@@ -156,7 +157,7 @@ const ContactUs = () => {
     const hasInsta = !!contact?.insta?.trim();
 
     return (
-        <View className="flex-1" style={{ backgroundColor: COLORS.primary }}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.primary }} edges={['top']} className="flex-1">
             <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
 
             {loading && !refreshing && <Loader />}
@@ -174,7 +175,7 @@ const ContactUs = () => {
             </View>
 
             {/* Content Sheet */}
-            <View className="flex-1 bg-white rounded-t-[30px] overflow-hidden">
+            <SafeAreaView edges={['bottom']} style={{ flex: 1, backgroundColor: '#ffffff' }} className="flex-1 bg-white rounded-t-[30px] overflow-hidden">
                 <ScrollView
                     className="flex-1"
                     contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
@@ -374,8 +375,8 @@ const ContactUs = () => {
                         </View>
                     )}
                 </ScrollView>
-            </View>
-        </View>
+            </SafeAreaView>
+        </SafeAreaView>
     );
 };
 

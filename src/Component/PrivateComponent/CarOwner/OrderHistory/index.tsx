@@ -8,6 +8,7 @@ import {
     ActivityIndicator,
     RefreshControl,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Header from "../../../../Common/Header/index";
 import { useNavigation } from "@react-navigation/native";
 import { BookingFeedbackService, FetchOrderHistory } from "./helper";
@@ -286,10 +287,22 @@ const OrderHistory = () => {
     };
 
     return (
-        <View className="flex-1 bg-[#E0211F]">
+        <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.primary }} edges={['top']} className="flex-1 bg-[#E0211F]">
             <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
 
-            {showLoading && <Loader />}
+            {showLoading && <View style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: 99,
+                backgroundColor: "rgba(0,0,0,0.3)",
+                justifyContent: "center",
+                alignItems: "center",
+            }}>
+                <Loader />
+            </View>}
 
             {/* Screen Header */}
             <View className="h-[60px] justify-center items-center bg-[#E0211F]">
@@ -297,7 +310,7 @@ const OrderHistory = () => {
             </View>
 
             {/* Main Content Area */}
-            <View className="flex-1 bg-slate-50 rounded-t-[28px] overflow-hidden">
+            <SafeAreaView edges={['bottom']} style={{ flex: 1, backgroundColor: '#f8fafc' }} className="flex-1 bg-slate-50 rounded-t-[28px] overflow-hidden">
                 {renderFilterTabs()}
 
                 <FlatList
@@ -332,8 +345,8 @@ const OrderHistory = () => {
                     onEndReached={loadMore}
                     onEndReachedThreshold={0.3}
                 />
-            </View>
-        </View>
+            </SafeAreaView>
+        </SafeAreaView>
     );
 };
 

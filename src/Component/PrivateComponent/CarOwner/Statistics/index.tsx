@@ -6,6 +6,7 @@ import {
     ScrollView,
     StatusBar,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { StatisticService } from "./helper";
 import { showError } from "../../../../Common/ToastMessage";
@@ -148,10 +149,22 @@ const Statistics = () => {
     };
 
     return (
-        <View className="flex-1 bg-[#E0211F]">
+        <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.primary }} edges={['top']} className="flex-1 bg-[#E0211F]">
             <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
 
-            {loading && <Loader />}
+            {loading && <View style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: 99,
+                backgroundColor: "rgba(0,0,0,0.3)",
+                justifyContent: "center",
+                alignItems: "center",
+            }}>
+                <Loader />
+            </View>}
 
             {/* Screen Header */}
             <View className="h-[60px] justify-center items-center bg-[#E0211F]">
@@ -159,7 +172,7 @@ const Statistics = () => {
             </View>
 
             {/* Main Content Sheet */}
-            <View className="flex-1 bg-slate-50 rounded-t-[28px] overflow-hidden">
+            <SafeAreaView edges={['bottom']} style={{ flex: 1, backgroundColor: '#f8fafc' }} className="flex-1 bg-slate-50 rounded-t-[28px] overflow-hidden">
                 <ScrollView
                     className="flex-1"
                     contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
@@ -178,8 +191,8 @@ const Statistics = () => {
                                         key={index}
                                         onPress={() => chooseFilter(false, item.value)}
                                         className={`mr-2.5 px-4 py-2 rounded-full border ${isSelected
-                                                ? "bg-[#E0211F] border-[#E0211F]"
-                                                : "bg-white border-slate-200"
+                                            ? "bg-[#E0211F] border-[#E0211F]"
+                                            : "bg-white border-slate-200"
                                             }`}
                                         style={{ elevation: isSelected ? 2 : 0 }}
                                         activeOpacity={0.7}
@@ -380,8 +393,8 @@ const Statistics = () => {
                         </View>
                     </View>
                 </ScrollView>
-            </View>
-        </View>
+            </SafeAreaView>
+        </SafeAreaView>
     );
 };
 
