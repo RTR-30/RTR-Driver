@@ -1,7 +1,7 @@
 export const Google_Key = "AIzaSyAHWYLIv-DU5RFPLD-0Ji-EEztDO02Mhfs";
 export const AppID = "63b4b0ba-aa00-4409-aaad-c2d75eb8ff86";
 
-export const ownBaseUrl = "http://10.150.153.206:8000/";
+export const ownBaseUrl = "http://10.80.198.206:8000/";
 
 export const baseUrl = `${ownBaseUrl}user/`;
 export const bookingBaseUrl = `${ownBaseUrl}booking/`;
